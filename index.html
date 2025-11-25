@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FELIZZO '25 Carrom Tournament</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 FELIZZO '25 Carrom Tournament</h1>
+            <div class="header-buttons">
+                <button id="adminBtn" class="btn btn-admin">Admin Login</button>
+                <button id="viewModeBtn" class="btn btn-secondary">View Mode</button>
+                <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Admin Login Modal -->
+        <div id="adminModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Admin Login</h2>
+                <input type="password" id="adminPassword" placeholder="Enter password">
+                <button id="loginBtn" class="btn btn-primary">Login</button>
+                <p id="loginError" class="error-message"></p>
+            </div>
+        </div>
+
+        <!-- Main Navigation -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-view="standings">Standings</button>
+            <button class="nav-btn" data-view="schedule">Match Schedule</button>
+            <button class="nav-btn" data-view="overall">Overall Tournament</button>
+        </nav>
+
+        <!-- Standings View -->
+        <div id="standingsView" class="view-container active">
+            <div class="team-tabs" id="teamTabs"></div>
+            <div class="team-content" id="teamContent"></div>
+        </div>
+
+        <!-- Schedule View -->
+        <div id="scheduleView" class="view-container">
+            <div class="team-tabs" id="scheduleTeamTabs"></div>
+            <div class="schedule-content" id="scheduleContent"></div>
+        </div>
+
+        <!-- Overall Tournament View -->
+        <div id="overallView" class="view-container">
+            <h2>Overall Tournament Standings</h2>
+            <div id="overallStandings"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- Your App Files -->
+    <script src="firebase-config.js"></script>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
