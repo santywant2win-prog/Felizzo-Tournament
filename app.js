@@ -7,7 +7,8 @@ const APP_STATE = {
     adminPassword: 'f25',
     dataLoaded: false,
     isOnline: true,
-    resetAction: null // stores pending reset action
+    resetAction: null, // stores pending reset action
+    firstBackupDone: false // tracks if initial backup was created
 };
 
 // Store original data for reset functionality
@@ -36,6 +37,12 @@ function initializeApp() {
     
     // Monitor connection status
     monitorConnectionStatus();
+    
+    // Check if first backup was done (from localStorage)
+    const backupDone = localStorage.getItem('felizzo_first_backup');
+    if (backupDone === 'true') {
+        APP_STATE.firstBackupDone = true;
+    }
 }
 
 // Firebase Data Management
@@ -168,6 +175,19 @@ function setupEventListeners() {
         showResetModal('all');
     });
     
+    // Backup button
+    document.getElementById('backupBtn').addEventListener('click', () => {
+        downloadBackup();
+    });
+    
+    // Restore button
+    document.getElementById('restoreBtn').addEventListener('click', () => {
+        document.getElementById('restoreFile').click();
+    });
+    
+    // Restore file input
+    document.getElementById('restoreFile').addEventListener('change', handleRestore);
+    
     // Modal close buttons
     document.querySelector('.close').addEventListener('click', hideAdminModal);
     document.querySelector('.close-reset').addEventListener('click', hideResetModal);
@@ -221,6 +241,11 @@ function handleLogin() {
         updateAdminIndicator();
         renderCurrentView();
         errorElement.textContent = '';
+        
+        // Check if first backup was done
+        if (!APP_STATE.firstBackupDone) {
+            showFirstBackupModal();
+        }
     } else {
         errorElement.textContent = 'Incorrect password. Please try again.';
     }
@@ -229,6 +254,8 @@ function handleLogin() {
 function updateAdminIndicator() {
     let indicator = document.querySelector('.admin-mode');
     const resetAllBtn = document.getElementById('resetAllBtn');
+    const backupBtn = document.getElementById('backupBtn');
+    const restoreBtn = document.getElementById('restoreBtn');
     
     if (!indicator) {
         indicator = document.createElement('div');
@@ -240,9 +267,13 @@ function updateAdminIndicator() {
     if (APP_STATE.isAdmin) {
         indicator.classList.add('active');
         resetAllBtn.style.display = 'inline-block';
+        backupBtn.style.display = 'inline-block';
+        restoreBtn.style.display = 'inline-block';
     } else {
         indicator.classList.remove('active');
         resetAllBtn.style.display = 'none';
+        backupBtn.style.display = 'none';
+        restoreBtn.style.display = 'none';
     }
 }
 
@@ -810,6 +841,9 @@ function confirmReset() {
 }
 
 function resetAllMatches() {
+    // Auto-backup before reset
+    autoBackupBeforeAction('Reset All');
+    
     updateSyncStatus('saving', '🔄 Resetting all...');
     
     // Reset all teams to original state (clear match results)
@@ -950,3 +984,171 @@ function renderOverallView() {
     
     container.innerHTML = html;
 }
+
+// ============================================
+// BACKUP & RESTORE SYSTEM
+// ============================================
+
+function showFirstBackupModal() {
+    const modal = document.getElementById('firstBackupModal');
+    modal.style.display = 'block';
+}
+
+function hideFirstBackupModal() {
+    const modal = document.getElementById('firstBackupModal');
+    modal.style.display = 'none';
+}
+
+function handleFirstBackup() {
+    // Download backup
+    downloadBackup('first-backup');
+    
+    // Mark as done
+    APP_STATE.firstBackupDone = true;
+    localStorage.setItem('felizzo_first_backup', 'true');
+    
+    // Close modal
+    hideFirstBackupModal();
+    
+    // Show success message
+    updateSyncStatus('synced', '✅ First backup created!');
+    setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 3000);
+}
+
+function downloadBackup(prefix = 'backup') {
+    try {
+        // Get current data
+        const backupData = {
+            tournamentData: tournamentData,
+            timestamp: new Date().toISOString(),
+            version: '2.0'
+        };
+        
+        // Convert to JSON
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        // Create download link
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Generate filename with date
+        const date = new Date().toISOString().split('T')[0];
+        const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+        link.download = `felizzo-${prefix}-${date}-${time}.json`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        console.log('Backup downloaded successfully');
+        
+        // Show success message
+        if (!APP_STATE.firstBackupDone || prefix !== 'first-backup') {
+            updateSyncStatus('synced', '✅ Backup downloaded!');
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Backup failed:', error);
+        updateSyncStatus('error', '❌ Backup failed');
+        setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 3000);
+        return false;
+    }
+}
+
+function handleRestore(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Show confirmation
+    if (!confirm('⚠️ WARNING: This will replace ALL current data with the backup. Are you absolutely sure?')) {
+        event.target.value = ''; // Clear file input
+        return;
+    }
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            updateSyncStatus('loading', '🔄 Restoring...');
+            
+            const backupData = JSON.parse(e.target.result);
+            
+            // Validate backup structure
+            if (!backupData.tournamentData) {
+                throw new Error('Invalid backup file format');
+            }
+            
+            // Restore data
+            Object.assign(tournamentData, backupData.tournamentData);
+            
+            // Save to Firebase
+            saveToFirebase((success) => {
+                if (success) {
+                    updateSyncStatus('synced', '✅ Data restored!');
+                    alert('✅ Data restored successfully from backup!');
+                    
+                    // Reload views
+                    renderAllViews();
+                    
+                    setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 3000);
+                } else {
+                    updateSyncStatus('error', '❌ Restore failed');
+                    alert('❌ Failed to save restored data to server. Please try again.');
+                }
+            });
+            
+        } catch (error) {
+            console.error('Restore failed:', error);
+            updateSyncStatus('error', '❌ Invalid backup file');
+            alert('❌ Failed to restore backup. File may be corrupted or invalid.');
+        }
+        
+        // Clear file input
+        event.target.value = '';
+    };
+    
+    reader.onerror = function() {
+        updateSyncStatus('error', '❌ Failed to read file');
+        alert('❌ Failed to read backup file.');
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+}
+
+function autoBackupBeforeAction(actionName) {
+    console.log(`Auto-backup before: ${actionName}`);
+    const success = downloadBackup(`auto-before-${actionName.toLowerCase().replace(/\s+/g, '-')}`);
+    
+    if (success) {
+        // Show brief notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10000;
+            font-weight: 600;
+        `;
+        notification.textContent = `💾 Auto-backup created before ${actionName}`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    return success;
+}
+

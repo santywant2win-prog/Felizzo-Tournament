@@ -13,6 +13,9 @@
             <div class="header-buttons">
                 <button id="adminBtn" class="btn btn-admin">Admin Login</button>
                 <button id="viewModeBtn" class="btn btn-secondary">View Mode</button>
+                <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
+                <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
+                <input type="file" id="restoreFile" accept=".json" style="display:none;">
                 <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
                 <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
             </div>
@@ -39,6 +42,26 @@
                     <button id="confirmResetBtn" class="btn btn-danger">Yes, Reset</button>
                     <button id="cancelResetBtn" class="btn btn-secondary">Cancel</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- First Backup Required Modal -->
+        <div id="firstBackupModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>⚠️ BACKUP REQUIRED</h2>
+                <p style="margin: 1.5rem 0; font-size: 1.1rem; line-height: 1.6;">
+                    <strong>This is your first admin login!</strong><br><br>
+                    Before managing tournament data, you must create a backup file. 
+                    This protects against accidental data loss.<br><br>
+                    Click the button below to download your backup file. 
+                    Save it somewhere safe (Desktop, Google Drive, etc.).
+                </p>
+                <button id="firstBackupBtn" class="btn btn-success" style="font-size: 1.1rem; padding: 1rem 2rem;" onclick="handleFirstBackup()">
+                    📥 Download Backup Now
+                </button>
+                <p style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
+                    You won't be able to use admin features until backup is created.
+                </p>
             </div>
         </div>
 
