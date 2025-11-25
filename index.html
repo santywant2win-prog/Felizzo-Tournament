@@ -13,6 +13,7 @@
             <div class="header-buttons">
                 <button id="adminBtn" class="btn btn-admin">Admin Login</button>
                 <button id="viewModeBtn" class="btn btn-secondary">View Mode</button>
+                <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
                 <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
             </div>
         </header>
@@ -25,6 +26,19 @@
                 <input type="password" id="adminPassword" placeholder="Enter password">
                 <button id="loginBtn" class="btn btn-primary">Login</button>
                 <p id="loginError" class="error-message"></p>
+            </div>
+        </div>
+
+        <!-- Reset Confirmation Modal -->
+        <div id="resetModal" class="modal">
+            <div class="modal-content">
+                <span class="close-reset">&times;</span>
+                <h2>⚠️ Confirm Reset</h2>
+                <p id="resetMessage" style="margin: 1rem 0; font-size: 1rem;"></p>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button id="confirmResetBtn" class="btn btn-danger">Yes, Reset</button>
+                    <button id="cancelResetBtn" class="btn btn-secondary">Cancel</button>
+                </div>
             </div>
         </div>
 

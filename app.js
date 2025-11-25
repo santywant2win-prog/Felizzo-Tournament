@@ -6,8 +6,12 @@ const APP_STATE = {
     currentTeam: null,
     adminPassword: 'f25',
     dataLoaded: false,
-    isOnline: true
+    isOnline: true,
+    resetAction: null // stores pending reset action
 };
+
+// Store original data for reset functionality
+let originalTournamentData = null;
 
 // Constants
 const POINTS = {
@@ -37,6 +41,11 @@ function initializeApp() {
 // Firebase Data Management
 function loadDataFromFirebase() {
     updateSyncStatus('loading', '🔄 Loading data...');
+    
+    // Store original data for reset functionality (deep clone)
+    if (!originalTournamentData) {
+        originalTournamentData = JSON.parse(JSON.stringify(tournamentData));
+    }
     
     tournamentRef.once('value', (snapshot) => {
         if (snapshot.exists()) {
@@ -154,8 +163,18 @@ function setupEventListeners() {
         renderCurrentView();
     });
     
-    // Modal close
+    // Reset All button
+    document.getElementById('resetAllBtn').addEventListener('click', () => {
+        showResetModal('all');
+    });
+    
+    // Modal close buttons
     document.querySelector('.close').addEventListener('click', hideAdminModal);
+    document.querySelector('.close-reset').addEventListener('click', hideResetModal);
+    
+    // Reset modal buttons
+    document.getElementById('confirmResetBtn').addEventListener('click', confirmReset);
+    document.getElementById('cancelResetBtn').addEventListener('click', hideResetModal);
     
     // Login button
     document.getElementById('loginBtn').addEventListener('click', handleLogin);
@@ -209,6 +228,7 @@ function handleLogin() {
 
 function updateAdminIndicator() {
     let indicator = document.querySelector('.admin-mode');
+    const resetAllBtn = document.getElementById('resetAllBtn');
     
     if (!indicator) {
         indicator = document.createElement('div');
@@ -219,8 +239,10 @@ function updateAdminIndicator() {
     
     if (APP_STATE.isAdmin) {
         indicator.classList.add('active');
+        resetAllBtn.style.display = 'inline-block';
     } else {
         indicator.classList.remove('active');
+        resetAllBtn.style.display = 'none';
     }
 }
 
@@ -468,7 +490,10 @@ function renderTeamSchedule(teamName) {
     
     let html = `
         <div class="card">
-            <h2>${teamName} - Match Schedule</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>${teamName} - Match Schedule</h2>
+                ${APP_STATE.isAdmin ? `<button class="btn btn-danger reset-team-btn" data-team="${teamName}">🔄 Reset ${teamName}</button>` : ''}
+            </div>
     `;
     
     teamData.matches.forEach(match => {
@@ -495,6 +520,15 @@ function renderTeamSchedule(teamName) {
     // Add event listeners for admin forms
     if (APP_STATE.isAdmin) {
         attachMatchFormListeners(teamName);
+        
+        // Reset team button
+        const resetTeamBtn = document.querySelector('.reset-team-btn');
+        if (resetTeamBtn) {
+            resetTeamBtn.addEventListener('click', (e) => {
+                const team = e.target.dataset.team;
+                showResetModal('team', team);
+            });
+        }
     }
 }
 
@@ -728,6 +762,88 @@ function showMessage(element, type, text) {
         element.textContent = '';
         element.className = 'message-area';
     }, 3000);
+}
+
+// Reset Functionality
+function showResetModal(action, teamName = null) {
+    const modal = document.getElementById('resetModal');
+    const message = document.getElementById('resetMessage');
+    
+    if (action === 'all') {
+        APP_STATE.resetAction = { type: 'all' };
+        message.innerHTML = '<strong>This will clear ALL match results for ALL teams.</strong><br>Are you sure?';
+    } else if (action === 'team') {
+        APP_STATE.resetAction = { type: 'team', teamName: teamName };
+        message.innerHTML = `<strong>This will clear all match results for ${teamName} only.</strong><br>Are you sure?`;
+    }
+    
+    modal.style.display = 'block';
+}
+
+function hideResetModal() {
+    document.getElementById('resetModal').style.display = 'none';
+    APP_STATE.resetAction = null;
+}
+
+function confirmReset() {
+    if (!APP_STATE.resetAction) return;
+    
+    const action = APP_STATE.resetAction;
+    
+    if (action.type === 'all') {
+        resetAllMatches();
+    } else if (action.type === 'team') {
+        resetTeamMatches(action.teamName);
+    }
+    
+    hideResetModal();
+}
+
+function resetAllMatches() {
+    updateSyncStatus('saving', '🔄 Resetting all...');
+    
+    // Reset all teams to original state (clear match results)
+    Object.keys(tournamentData).forEach(teamName => {
+        tournamentData[teamName].matches.forEach((match, index) => {
+            match.winner = '';
+            match.runner = '';
+            match.draw = '';
+            match.date = '';
+        });
+    });
+    
+    // Save to Firebase
+    saveToFirebase((success) => {
+        if (success) {
+            updateSyncStatus('synced', '✅ All matches reset!');
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        } else {
+            updateSyncStatus('error', '❌ Reset failed');
+        }
+    });
+}
+
+function resetTeamMatches(teamName) {
+    updateSyncStatus('saving', '🔄 Resetting team...');
+    
+    // Reset only this team's matches
+    tournamentData[teamName].matches.forEach(match => {
+        match.winner = '';
+        match.runner = '';
+        match.draw = '';
+        match.date = '';
+    });
+    
+    // Save to Firebase
+    saveToFirebase((success) => {
+        if (success) {
+            updateSyncStatus('synced', `✅ ${teamName} reset!`);
+            renderTeamSchedule(teamName);
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        } else {
+            updateSyncStatus('error', '❌ Reset failed');
+        }
+    });
 }
 
 // Render Overall Tournament View
