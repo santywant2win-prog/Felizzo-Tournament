@@ -298,9 +298,15 @@ function calculateStandings(teamName) {
         };
     });
     
+    // Check if all matches are complete
+    const totalMatches = teamData.matches.length;
+    let completedMatches = 0;
+    
     // Calculate from matches
     teamData.matches.forEach(match => {
         if (match.winner && match.runner) {
+            completedMatches++;
+            
             // Check for draw
             if (match.winner === match.runner) {
                 // Draw
@@ -328,6 +334,7 @@ function calculateStandings(teamName) {
                 }
             }
         } else if (match.draw) {
+            completedMatches++;
             // Legacy draw format
             const drawTeams = match.draw.split(',').map(t => t.trim());
             drawTeams.forEach(teamId => {
@@ -340,6 +347,9 @@ function calculateStandings(teamName) {
         }
     });
     
+    // Check if ALL matches are complete
+    const allMatchesComplete = (completedMatches === totalMatches);
+    
     // Convert to array and sort
     const standingsArray = Object.values(standings);
     standingsArray.sort((a, b) => {
@@ -348,9 +358,9 @@ function calculateStandings(teamName) {
         return a.played - b.played;
     });
     
-    // Mark top 2 as qualified
+    // Mark top 2 as qualified ONLY if all matches are complete
     standingsArray.forEach((team, index) => {
-        team.qualified = index < 2;
+        team.qualified = allMatchesComplete && (index < 2);
         team.rank = index + 1;
     });
     
