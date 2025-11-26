@@ -619,14 +619,16 @@ header h1 {
     right: 20px;
     background: linear-gradient(135deg, var(--accent-color), #7c3aed);
     color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 2rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
     font-weight: 700;
+    font-size: 0.75rem;
     box-shadow: var(--shadow-elevated);
     display: block;
     z-index: 999;
-    opacity: 0.3;
+    opacity: 0.4;
     transition: opacity 0.3s ease;
+    letter-spacing: 1px;
 }
 
 .admin-mode.active {
@@ -821,11 +823,9 @@ header h1 {
     .admin-mode {
         bottom: 70px;
         right: 10px;
-        left: 10px;
-        padding: 0.5rem 1rem;
-        font-size: 0.85rem;
-        text-align: center;
-        border-radius: 1rem;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+        border-radius: 0.4rem;
     }
     
     .floating-corner-btn {
@@ -896,8 +896,10 @@ header h1 {
     /* MOBILE FIX: Stack floating buttons vertically */
     .admin-mode {
         bottom: 60px;
-        font-size: 0.8rem;
-        padding: 0.4rem 0.75rem;
+        right: 10px;
+        font-size: 0.65rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 0.35rem;
     }
     
     .floating-corner-btn {

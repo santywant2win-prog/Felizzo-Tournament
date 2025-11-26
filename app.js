@@ -280,7 +280,7 @@ function updateAdminIndicator() {
     }
     
     if (APP_STATE.isAdmin) {
-        indicator.textContent = '🔓 Admin Mode';
+        indicator.textContent = '🔓 SU';
         indicator.classList.add('active');
         resetAllBtn.style.display = 'inline-block';
         backupBtn.style.display = 'inline-block';
@@ -290,7 +290,7 @@ function updateAdminIndicator() {
         viewModeBtn.style.display = 'block';
         if (quickMatchJump) quickMatchJump.style.display = 'block';
     } else {
-        indicator.textContent = '👁️ View Mode';
+        indicator.textContent = '👁️ VIEW';
         indicator.classList.remove('active');
         resetAllBtn.style.display = 'none';
         backupBtn.style.display = 'none';
