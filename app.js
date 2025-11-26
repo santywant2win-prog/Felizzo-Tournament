@@ -4,7 +4,7 @@ const APP_STATE = {
     isAdmin: false,
     currentView: 'home',
     currentTeam: null,
-    adminPassword: 'f25ca',
+    adminPassword: 'f25',
     dataLoaded: false,
     isOnline: true,
     resetAction: null, // stores pending reset action
@@ -165,6 +165,7 @@ function renderAllViews() {
     renderStandingsView();
     renderScheduleView();
     renderParticipantsView();
+    renderKnockoutView();
     renderOverallView();
 }
 
@@ -358,6 +359,9 @@ function renderCurrentView() {
             break;
         case 'participants':
             renderParticipantsView();
+            break;
+        case 'knockout':
+            renderKnockoutView();
             break;
         case 'overall':
             renderOverallView();
@@ -2016,3 +2020,394 @@ function installPWA() {
         hideInstallButton();
     });
 }
+
+// ============================================
+// KNOCKOUT STAGE
+// ============================================
+
+// Knockout data structure
+let knockoutData = {
+    qualifiedTeams: [],
+    playInMatch: null,
+    bracket: null
+};
+
+function renderKnockoutView() {
+    if (!APP_STATE.dataLoaded) return;
+    
+    // Show admin controls if admin
+    const adminControls = document.getElementById('knockoutAdminControls');
+    if (adminControls) {
+        adminControls.style.display = APP_STATE.isAdmin ? 'block' : 'none';
+    }
+    
+    renderQualificationStatus();
+    renderBracket();
+}
+
+// ============================================
+// QUALIFICATION LOGIC
+// ============================================
+
+function calculateQualifiedTeams() {
+    console.log('🏆 Calculating qualified teams...');
+    
+    const qualified = [];
+    const standings = {};
+    
+    // Calculate standings for each group
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        const groupStandings = calculateStandings(group);
+        standings[groupName] = groupStandings;
+        
+        // Top 2 from each group (guaranteed)
+        if (groupStandings.length >= 2) {
+            qualified.push({
+                teamId: groupStandings[0].teamId,
+                groupName: groupName,
+                position: 1,
+                type: 'guaranteed',
+                points: groupStandings[0].points,
+                wins: groupStandings[0].wins
+            });
+            qualified.push({
+                teamId: groupStandings[1].teamId,
+                groupName: groupName,
+                position: 2,
+                type: 'guaranteed',
+                points: groupStandings[1].points,
+                wins: groupStandings[1].wins
+            });
+        }
+    });
+    
+    // Wild card teams (3rd place from 10 groups, excluding 1P and SE)
+    const wildCardGroups = ['Discovery', '3 P Apps', 'SDL', 'System Experience', 
+                           'Core Experience', '3 P NDL', 'FBDA', 'MOD', 'Vega'];
+    
+    wildCardGroups.forEach(groupName => {
+        const groupStandings = standings[groupName];
+        if (groupStandings && groupStandings.length >= 3) {
+            qualified.push({
+                teamId: groupStandings[2].teamId,
+                groupName: groupName,
+                position: 3,
+                type: 'wildcard',
+                points: groupStandings[2].points,
+                wins: groupStandings[2].wins
+            });
+        }
+    });
+    
+    // Play-in match (3rd place from 1P vs SE)
+    const onePStandings = standings['1 P'];
+    const seStandings = standings['SE'];
+    
+    if (onePStandings && onePStandings.length >= 3 && seStandings && seStandings.length >= 3) {
+        knockoutData.playInMatch = {
+            team1: {
+                teamId: onePStandings[2].teamId,
+                groupName: '1 P',
+                points: onePStandings[2].points,
+                wins: onePStandings[2].wins
+            },
+            team2: {
+                teamId: seStandings[2].teamId,
+                groupName: 'SE',
+                points: seStandings[2].points,
+                wins: seStandings[2].wins
+            },
+            winner: null
+        };
+    }
+    
+    knockoutData.qualifiedTeams = qualified;
+    
+    alert(`✅ Calculated ${qualified.length} qualified teams + 1 play-in match!`);
+    renderQualificationStatus();
+}
+
+function renderQualificationStatus() {
+    const container = document.getElementById('qualificationStatus');
+    if (!container) return;
+    
+    if (knockoutData.qualifiedTeams.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <p>No qualified teams yet. Click "Calculate Qualified Teams" to begin.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group qualified teams
+    const guaranteed = knockoutData.qualifiedTeams.filter(t => t.type === 'guaranteed');
+    const wildcards = knockoutData.qualifiedTeams.filter(t => t.type === 'wildcard');
+    
+    let html = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="padding: 1rem; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(6, 182, 212, 0.1)); border-radius: 0.75rem; border: 2px solid var(--primary-color);">
+                <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">✅ Guaranteed (Top 2)</h3>
+                <p style="font-size: 2rem; font-weight: 700; margin: 0;">${guaranteed.length} teams</p>
+            </div>
+            <div style="padding: 1rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)); border-radius: 0.75rem; border: 2px solid var(--accent-color);">
+                <h3 style="color: var(--accent-color); margin-bottom: 0.5rem;">🎟️ Wild Cards</h3>
+                <p style="font-size: 2rem; font-weight: 700; margin: 0;">${wildcards.length} teams</p>
+            </div>
+            <div style="padding: 1rem; background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(202, 138, 4, 0.1)); border-radius: 0.75rem; border: 2px solid #eab308;">
+                <h3 style="color: #eab308; margin-bottom: 0.5rem;">🥊 Play-In</h3>
+                <p style="font-size: 2rem; font-weight: 700; margin: 0;">${knockoutData.playInMatch ? '1 match' : 'Not set'}</p>
+            </div>
+        </div>
+    `;
+    
+    // Show play-in match details
+    if (knockoutData.playInMatch) {
+        const pim = knockoutData.playInMatch;
+        html += `
+            <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(202, 138, 4, 0.1)); border-radius: 0.75rem; margin-bottom: 1.5rem; border: 2px solid #eab308;">
+                <h3 style="color: #eab308; margin-bottom: 1rem;">🥊 Play-In Match (Final Wild Card Spot)</h3>
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center;">
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${pim.team1.teamId}</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light);">${pim.team1.groupName} - 3rd Place</div>
+                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">Points: ${pim.team1.points} | Wins: ${pim.team1.wins}</div>
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: #eab308;">VS</div>
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary-color);">${pim.team2.teamId}</div>
+                        <div style="font-size: 0.9rem; color: var(--text-light);">${pim.team2.groupName} - 3rd Place</div>
+                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">Points: ${pim.team2.points} | Wins: ${pim.team2.wins}</div>
+                    </div>
+                </div>
+                ${APP_STATE.isAdmin ? `
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <button onclick="setPlayInWinner('${pim.team1.teamId}')" class="btn btn-primary">${pim.team1.teamId} Wins</button>
+                        <button onclick="setPlayInWinner('${pim.team2.teamId}')" class="btn btn-primary" style="margin-left: 0.5rem;">${pim.team2.teamId} Wins</button>
+                    </div>
+                ` : ''}
+                ${pim.winner ? `<div style="margin-top: 1rem; text-align: center; color: #10b981; font-weight: 700; font-size: 1.1rem;">✅ Winner: ${pim.winner}</div>` : ''}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function setPlayInWinner(winner) {
+    if (!knockoutData.playInMatch) return;
+    
+    knockoutData.playInMatch.winner = winner;
+    
+    // Add winner to qualified teams
+    const winnerTeam = winner === knockoutData.playInMatch.team1.teamId 
+        ? knockoutData.playInMatch.team1 
+        : knockoutData.playInMatch.team2;
+    
+    knockoutData.qualifiedTeams.push({
+        teamId: winnerTeam.teamId,
+        groupName: winnerTeam.groupName,
+        position: 3,
+        type: 'playin',
+        points: winnerTeam.points,
+        wins: winnerTeam.wins
+    });
+    
+    alert(`✅ ${winner} wins the play-in match and qualifies for knockout!`);
+    renderQualificationStatus();
+}
+
+// ============================================
+// BRACKET GENERATION
+// ============================================
+
+function generateBracket() {
+    // Check if we have 32 qualified teams (31 + play-in winner)
+    const totalQualified = knockoutData.qualifiedTeams.length;
+    const playInComplete = knockoutData.playInMatch && knockoutData.playInMatch.winner;
+    
+    if (totalQualified < 31) {
+        alert('❌ Please calculate qualified teams first!');
+        return;
+    }
+    
+    if (!playInComplete) {
+        alert('❌ Please complete the play-in match first!');
+        return;
+    }
+    
+    console.log('🎲 Generating bracket...');
+    
+    // Get all 32 qualified teams
+    const teams = [...knockoutData.qualifiedTeams];
+    
+    // Shuffle teams randomly
+    const shuffled = shuffleArray(teams);
+    
+    // Try to avoid same group matchups in Round of 32
+    const bracket = createBracketWithGroupSeparation(shuffled);
+    
+    knockoutData.bracket = bracket;
+    
+    alert('✅ Bracket generated! 32 teams ready for knockout!');
+    renderBracket();
+}
+
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function createBracketWithGroupSeparation(teams) {
+    // Try to separate same-group teams
+    const positions = Array(32).fill(null);
+    const grouped = {};
+    
+    // Group teams by their group
+    teams.forEach(team => {
+        if (!grouped[team.groupName]) grouped[team.groupName] = [];
+        grouped[team.groupName].push(team);
+    });
+    
+    // Place teams trying to avoid same group in adjacent positions
+    let posIdx = 0;
+    teams.forEach(team => {
+        // Find best position (not next to same group if possible)
+        let placed = false;
+        for (let attempt = 0; attempt < 32 && !placed; attempt++) {
+            const tryPos = (posIdx + attempt) % 32;
+            if (!positions[tryPos]) {
+                // Check if adjacent position has same group
+                const adjacentPos = tryPos % 2 === 0 ? tryPos + 1 : tryPos - 1;
+                const adjacentTeam = positions[adjacentPos];
+                
+                if (!adjacentTeam || adjacentTeam.groupName !== team.groupName) {
+                    positions[tryPos] = team;
+                    placed = true;
+                    posIdx = tryPos + 1;
+                }
+            }
+        }
+        
+        // If still not placed, just put it anywhere
+        if (!placed) {
+            const emptyPos = positions.findIndex(p => p === null);
+            if (emptyPos !== -1) {
+                positions[emptyPos] = team;
+            }
+        }
+    });
+    
+    // Create bracket structure
+    const bracket = {
+        round32: [],
+        round16: Array(16).fill(null),
+        quarterFinals: Array(8).fill(null),
+        semiFinals: Array(4).fill(null),
+        final: null,
+        winner: null
+    };
+    
+    // Create Round of 32 matches
+    for (let i = 0; i < 32; i += 2) {
+        bracket.round32.push({
+            matchNo: (i / 2) + 1,
+            team1: positions[i],
+            team2: positions[i + 1],
+            winner: null
+        });
+    }
+    
+    return bracket;
+}
+
+function renderBracket() {
+    const container = document.getElementById('bracketDisplay');
+    if (!container) return;
+    
+    if (!knockoutData.bracket) {
+        container.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <p>No bracket generated yet. Click "Generate Bracket" to create the knockout draw.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const bracket = knockoutData.bracket;
+    
+    let html = '<div style="margin-top: 2rem;">';
+    
+    // Round of 32
+    html += '<h3 style="color: var(--primary-color); margin-bottom: 1rem;">🥇 Round of 32</h3>';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">';
+    
+    bracket.round32.forEach(match => {
+        html += `
+            <div style="padding: 1rem; background: var(--bg-dark); border-radius: 0.75rem; border: 2px solid var(--border-color);">
+                <div style="text-align: center; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.75rem;">Match ${match.matchNo}</div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="padding: 0.75rem; background: ${match.winner === match.team1.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))' : 'var(--bg-light)'}; border-radius: 0.5rem; border: 2px solid ${match.winner === match.team1.teamId ? '#10b981' : 'transparent'};">
+                        <strong style="color: var(--primary-color);">${match.team1.teamId}</strong>
+                        <span style="font-size: 0.85rem; color: var(--text-light); margin-left: 0.5rem;">(${match.team1.groupName})</span>
+                    </div>
+                    <div style="text-align: center; color: var(--text-secondary); font-weight: 700;">VS</div>
+                    <div style="padding: 0.75rem; background: ${match.winner === match.team2.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))' : 'var(--bg-light)'}; border-radius: 0.5rem; border: 2px solid ${match.winner === match.team2.teamId ? '#10b981' : 'transparent'};">
+                        <strong style="color: var(--secondary-color);">${match.team2.teamId}</strong>
+                        <span style="font-size: 0.85rem; color: var(--text-light); margin-left: 0.5rem;">(${match.team2.groupName})</span>
+                    </div>
+                </div>
+                ${APP_STATE.isAdmin && !match.winner ? `
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                        <button onclick="setKnockoutWinner(32, ${match.matchNo}, '${match.team1.teamId}')" class="btn btn-success" style="flex: 1; padding: 0.5rem; font-size: 0.85rem;">✓</button>
+                        <button onclick="setKnockoutWinner(32, ${match.matchNo}, '${match.team2.teamId}')" class="btn btn-success" style="flex: 1; padding: 0.5rem; font-size: 0.85rem;">✓</button>
+                    </div>
+                ` : ''}
+                ${match.winner ? `<div style="margin-top: 0.75rem; text-align: center; color: #10b981; font-weight: 700;">Winner: ${match.winner}</div>` : ''}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+function setKnockoutWinner(round, matchNo, winner) {
+    if (round === 32) {
+        const match = knockoutData.bracket.round32[matchNo - 1];
+        if (match) {
+            match.winner = winner;
+            
+            // Advance to Round of 16
+            const r16Index = Math.floor((matchNo - 1) / 2);
+            if (!knockoutData.bracket.round16[r16Index]) {
+                knockoutData.bracket.round16[r16Index] = { teams: [], winner: null };
+            }
+            knockoutData.bracket.round16[r16Index].teams.push(winner);
+        }
+    }
+    
+    alert(`✅ ${winner} advances!`);
+    renderBracket();
+}
+
+function resetKnockout() {
+    if (!confirm('⚠️ This will reset all knockout data. Continue?')) return;
+    
+    knockoutData = {
+        qualifiedTeams: [],
+        playInMatch: null,
+        bracket: null
+    };
+    
+    alert('✅ Knockout stage reset!');
+    renderKnockoutView();
+}
+
