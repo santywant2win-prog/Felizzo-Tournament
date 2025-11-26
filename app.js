@@ -265,6 +265,8 @@ function updateAdminIndicator() {
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
     const populateDatesBtn = document.getElementById('populateDatesBtn');
+    const adminBtn = document.getElementById('adminBtn');
+    const viewModeBtn = document.getElementById('viewModeBtn');
     
     if (!indicator) {
         indicator = document.createElement('div');
@@ -279,6 +281,8 @@ function updateAdminIndicator() {
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
         populateDatesBtn.style.display = 'inline-block';
+        adminBtn.style.display = 'none';
+        viewModeBtn.style.display = 'block';
     } else {
         indicator.textContent = '👁️ View Mode';
         indicator.classList.remove('active');
@@ -286,6 +290,8 @@ function updateAdminIndicator() {
         backupBtn.style.display = 'none';
         restoreBtn.style.display = 'none';
         populateDatesBtn.style.display = 'none';
+        adminBtn.style.display = 'block';
+        viewModeBtn.style.display = 'none';
     }
 }
 
@@ -1243,9 +1249,9 @@ function autoBackupBeforeAction(actionName) {
 function populateMatchDates() {
     console.log('Populating match dates with round-robin scheduling...');
     
-    // Date range: Nov 24 - Dec 10, 2024
-    const startDate = new Date('2024-11-24');
-    const endDate = new Date('2024-12-10');
+    // Date range: Nov 24 - Dec 10, 2025
+    const startDate = new Date('2025-11-24');
+    const endDate = new Date('2025-12-10');
     
     // Generate all dates
     const dates = [];

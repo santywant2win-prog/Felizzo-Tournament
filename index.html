@@ -11,8 +11,6 @@
         <header>
             <h1>🏆 FELIZZO '25 Carrom Tournament</h1>
             <div class="header-buttons">
-                <button id="adminBtn" class="btn btn-admin">Admin Login</button>
-                <button id="viewModeBtn" class="btn btn-secondary">View Mode</button>
                 <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
                 <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
                 <input type="file" id="restoreFile" accept=".json" style="display:none;">
@@ -78,7 +76,7 @@
             <div class="card">
                 <h2>📅 Complete Match Schedule</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    All 222 league matches scheduled from November 24 to December 10, 2024
+                    All 222 league matches scheduled from November 24 to December 10, 2025
                 </p>
                 
                 <!-- Filters -->
@@ -100,7 +98,7 @@
                     </div>
                     <div class="form-group">
                         <label>Filter by Date</label>
-                        <input type="date" id="homeFilterDate" class="filter-select">
+                        <input type="date" id="homeFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
                     </div>
                     <div class="form-group">
                         <label>Search Players/Teams</label>
@@ -151,7 +149,7 @@
                     </div>
                     <div class="form-group">
                         <label>Filter by Date</label>
-                        <input type="date" id="scheduleFilterDate" class="filter-select">
+                        <input type="date" id="scheduleFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
                     </div>
                     <div class="form-group">
                         <label>Search Players/Teams</label>
@@ -173,6 +171,10 @@
 
     <!-- Fixed Position Badges -->
     <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
+    
+    <!-- Floating Corner Buttons -->
+    <button id="adminBtn" class="floating-corner-btn admin-btn">🔐 Admin</button>
+    <button id="viewModeBtn" class="floating-corner-btn view-btn" style="display:none;">👁️ View Mode</button>
 
     <!-- Footer Trademark -->
     <div class="footer-trademark">
