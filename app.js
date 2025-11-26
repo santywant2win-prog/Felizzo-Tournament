@@ -193,6 +193,9 @@ function setupEventListeners() {
     // Restore file input
     document.getElementById('restoreFile').addEventListener('change', handleRestore);
     
+    // Populate dates button
+    document.getElementById('populateDatesBtn').addEventListener('click', handlePopulateDates);
+    
     // Modal close buttons
     document.querySelector('.close').addEventListener('click', hideAdminModal);
     document.querySelector('.close-reset').addEventListener('click', hideResetModal);
@@ -261,6 +264,7 @@ function updateAdminIndicator() {
     const resetAllBtn = document.getElementById('resetAllBtn');
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
+    const populateDatesBtn = document.getElementById('populateDatesBtn');
     
     if (!indicator) {
         indicator = document.createElement('div');
@@ -274,11 +278,13 @@ function updateAdminIndicator() {
         resetAllBtn.style.display = 'inline-block';
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
+        populateDatesBtn.style.display = 'inline-block';
     } else {
         indicator.classList.remove('active');
         resetAllBtn.style.display = 'none';
         backupBtn.style.display = 'none';
         restoreBtn.style.display = 'none';
+        populateDatesBtn.style.display = 'none';
     }
 }
 
@@ -519,6 +525,9 @@ function renderScheduleView() {
     const tabsContainer = document.getElementById('scheduleTeamTabs');
     const contentContainer = document.getElementById('scheduleContent');
     
+    // Setup filter listeners (once)
+    setupScheduleFilters();
+    
     // Render team tabs
     tabsContainer.innerHTML = '';
     Object.keys(tournamentData).forEach((teamName, index) => {
@@ -533,9 +542,36 @@ function renderScheduleView() {
     renderTeamSchedule(APP_STATE.currentTeam);
 }
 
+function setupScheduleFilters() {
+    const statusFilter = document.getElementById('scheduleFilterStatus');
+    const dateFilter = document.getElementById('scheduleFilterDate');
+    const searchText = document.getElementById('scheduleSearchText');
+    
+    if (!statusFilter || !dateFilter || !searchText) return;
+    
+    // Remove existing listeners by cloning
+    const newStatusFilter = statusFilter.cloneNode(true);
+    const newDateFilter = dateFilter.cloneNode(true);
+    const newSearchText = searchText.cloneNode(true);
+    
+    statusFilter.parentNode.replaceChild(newStatusFilter, statusFilter);
+    dateFilter.parentNode.replaceChild(newDateFilter, dateFilter);
+    searchText.parentNode.replaceChild(newSearchText, searchText);
+    
+    // Add new listeners
+    newStatusFilter.addEventListener('change', () => renderTeamSchedule(APP_STATE.currentTeam));
+    newDateFilter.addEventListener('change', () => renderTeamSchedule(APP_STATE.currentTeam));
+    newSearchText.addEventListener('input', () => renderTeamSchedule(APP_STATE.currentTeam));
+}
+
 function renderTeamSchedule(teamName) {
     const contentContainer = document.getElementById('scheduleContent');
     const teamData = tournamentData[teamName];
+    
+    // Get filter values
+    const statusFilter = document.getElementById('scheduleFilterStatus')?.value || '';
+    const dateFilter = document.getElementById('scheduleFilterDate')?.value || '';
+    const searchText = document.getElementById('scheduleSearchText')?.value.toLowerCase() || '';
     
     let html = `
         <div class="card">
@@ -545,9 +581,41 @@ function renderTeamSchedule(teamName) {
             </div>
     `;
     
+    let matchesDisplayed = 0;
+    
     teamData.matches.forEach(match => {
         const status = getMatchStatus(match);
         const statusClass = status === 'Completed' ? 'completed' : (status === 'Draw' ? 'draw' : 'pending');
+        
+        // Apply filters
+        let include = true;
+        
+        // Status filter
+        if (statusFilter) {
+            const matchStatus = status.toLowerCase();
+            if (matchStatus !== statusFilter) {
+                include = false;
+            }
+        }
+        
+        // Date filter
+        if (dateFilter && match.date !== dateFilter) {
+            include = false;
+        }
+        
+        // Search filter
+        if (searchText) {
+            const team1Data = getTeamData(teamName, match.opponent1);
+            const team2Data = getTeamData(teamName, match.opponent2);
+            const searchString = `${match.opponent1} ${match.opponent2} ${team1Data} ${team2Data}`.toLowerCase();
+            if (!searchString.includes(searchText)) {
+                include = false;
+            }
+        }
+        
+        if (!include) return;
+        
+        matchesDisplayed++;
         
         html += `
             <div class="match-item">
@@ -562,6 +630,10 @@ function renderTeamSchedule(teamName) {
             </div>
         `;
     });
+    
+    if (matchesDisplayed === 0) {
+        html += '<p style="text-align: center; padding: 2rem; color: var(--text-light);">No matches found with current filters</p>';
+    }
     
     html += '</div>';
     contentContainer.innerHTML = html;
@@ -1257,6 +1329,58 @@ function renderHomeView() {
     const tbody = document.getElementById('scheduleTableBody');
     if (!tbody) return;
     
+    // Populate group filter dropdown
+    const groupFilter = document.getElementById('homeFilterGroup');
+    if (groupFilter && groupFilter.options.length === 1) {
+        Object.keys(tournamentData).forEach(groupName => {
+            const option = document.createElement('option');
+            option.value = groupName;
+            option.textContent = groupName;
+            groupFilter.appendChild(option);
+        });
+    }
+    
+    // Add filter event listeners
+    setupHomeFilters();
+    
+    // Render matches
+    renderHomeMatches();
+}
+
+function setupHomeFilters() {
+    const groupFilter = document.getElementById('homeFilterGroup');
+    const statusFilter = document.getElementById('homeFilterStatus');
+    const dateFilter = document.getElementById('homeFilterDate');
+    const searchText = document.getElementById('homeSearchText');
+    
+    // Remove existing listeners
+    const newGroupFilter = groupFilter.cloneNode(true);
+    const newStatusFilter = statusFilter.cloneNode(true);
+    const newDateFilter = dateFilter.cloneNode(true);
+    const newSearchText = searchText.cloneNode(true);
+    
+    groupFilter.parentNode.replaceChild(newGroupFilter, groupFilter);
+    statusFilter.parentNode.replaceChild(newStatusFilter, statusFilter);
+    dateFilter.parentNode.replaceChild(newDateFilter, dateFilter);
+    searchText.parentNode.replaceChild(newSearchText, searchText);
+    
+    // Add new listeners
+    newGroupFilter.addEventListener('change', renderHomeMatches);
+    newStatusFilter.addEventListener('change', renderHomeMatches);
+    newDateFilter.addEventListener('change', renderHomeMatches);
+    newSearchText.addEventListener('input', renderHomeMatches);
+}
+
+function renderHomeMatches() {
+    const tbody = document.getElementById('scheduleTableBody');
+    if (!tbody) return;
+    
+    // Get filter values
+    const groupFilter = document.getElementById('homeFilterGroup')?.value || '';
+    const statusFilter = document.getElementById('homeFilterStatus')?.value || '';
+    const dateFilter = document.getElementById('homeFilterDate')?.value || '';
+    const searchText = document.getElementById('homeSearchText')?.value.toLowerCase() || '';
+    
     // Collect all matches with full details
     const allMatches = [];
     let serialNo = 1;
@@ -1269,7 +1393,7 @@ function renderHomeView() {
             const team1 = group.participants.find(p => p.teamId === match.opponent1);
             const team2 = group.participants.find(p => p.teamId === match.opponent2);
             
-            allMatches.push({
+            const matchData = {
                 serialNo: serialNo++,
                 groupName: groupName,
                 matchNo: match.matchNo,
@@ -1283,7 +1407,43 @@ function renderHomeView() {
                 winner: match.winner,
                 runner: match.runner,
                 draw: match.draw
-            });
+            };
+            
+            // Apply filters
+            let include = true;
+            
+            // Group filter
+            if (groupFilter && matchData.groupName !== groupFilter) {
+                include = false;
+            }
+            
+            // Status filter
+            if (statusFilter) {
+                let matchStatus = 'pending';
+                if (matchData.winner && matchData.runner) {
+                    matchStatus = (matchData.winner === matchData.runner) ? 'draw' : 'completed';
+                }
+                if (matchStatus !== statusFilter) {
+                    include = false;
+                }
+            }
+            
+            // Date filter
+            if (dateFilter && matchData.date !== dateFilter) {
+                include = false;
+            }
+            
+            // Search filter
+            if (searchText) {
+                const searchString = `${matchData.team1Id} ${matchData.team1Name1} ${matchData.team1Name2} ${matchData.team2Id} ${matchData.team2Name1} ${matchData.team2Name2} ${matchData.groupName}`.toLowerCase();
+                if (!searchString.includes(searchText)) {
+                    include = false;
+                }
+            }
+            
+            if (include) {
+                allMatches.push(matchData);
+            }
         });
     });
     
@@ -1296,7 +1456,7 @@ function renderHomeView() {
     
     // Render table rows
     let html = '';
-    allMatches.forEach(match => {
+    allMatches.forEach((match, index) => {
         const team1Players = `${match.team1Name1}${match.team1Name2 ? ' & ' + match.team1Name2 : ''}`;
         const team2Players = `${match.team2Name1}${match.team2Name2 ? ' & ' + match.team2Name2 : ''}`;
         
@@ -1324,7 +1484,7 @@ function renderHomeView() {
         
         html += `
             <tr>
-                <td><strong>${match.serialNo}</strong></td>
+                <td><strong>${index + 1}</strong></td>
                 <td>Match ${match.matchNo}</td>
                 <td>
                     <strong>${match.team1Id}</strong><br>
@@ -1341,7 +1501,35 @@ function renderHomeView() {
         `;
     });
     
+    if (allMatches.length === 0) {
+        html = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-light);">No matches found with current filters</td></tr>';
+    }
+    
     tbody.innerHTML = html;
+}
+
+function handlePopulateDates() {
+    if (!confirm('⚠️ This will populate/update dates for ALL matches. Continue?')) {
+        return;
+    }
+    
+    updateSyncStatus('saving', '🔄 Populating dates...');
+    
+    // Populate dates
+    populateMatchDates();
+    
+    // Save to Firebase
+    saveToFirebase((success) => {
+        if (success) {
+            updateSyncStatus('synced', '✅ Dates populated!');
+            alert('✅ All match dates have been populated successfully!');
+            renderAllViews();
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        } else {
+            updateSyncStatus('error', '❌ Failed to populate dates');
+            alert('❌ Failed to save dates. Please try again.');
+        }
+    });
 }
 
 

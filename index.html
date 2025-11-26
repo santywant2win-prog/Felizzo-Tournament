@@ -16,6 +16,7 @@
                 <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
                 <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
                 <input type="file" id="restoreFile" accept=".json" style="display:none;">
+                <button id="populateDatesBtn" class="btn btn-secondary" style="display:none;">🔄 Populate Dates</button>
                 <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
                 <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
             </div>
@@ -80,6 +81,34 @@
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
                     All 222 league matches scheduled from November 24 to December 10, 2024
                 </p>
+                
+                <!-- Filters -->
+                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>Filter by Group</label>
+                        <select id="homeFilterGroup" class="filter-select">
+                            <option value="">All Groups</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Status</label>
+                        <select id="homeFilterStatus" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="draw">Draw</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Date</label>
+                        <input type="date" id="homeFilterDate" class="filter-select">
+                    </div>
+                    <div class="form-group">
+                        <label>Search Players/Teams</label>
+                        <input type="text" id="homeSearchText" class="filter-select" placeholder="Type to search...">
+                    </div>
+                </div>
+                
                 <div class="table-container">
                     <table class="standings-table" id="scheduleTable">
                         <thead>
@@ -109,6 +138,29 @@
 
         <!-- Schedule View -->
         <div id="scheduleView" class="view-container">
+            <!-- Filters -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Filter by Status</label>
+                        <select id="scheduleFilterStatus" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending Only</option>
+                            <option value="completed">Completed Only</option>
+                            <option value="draw">Draw Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Date</label>
+                        <input type="date" id="scheduleFilterDate" class="filter-select">
+                    </div>
+                    <div class="form-group">
+                        <label>Search Players/Teams</label>
+                        <input type="text" id="scheduleSearchText" class="filter-select" placeholder="Type to search...">
+                    </div>
+                </div>
+            </div>
+            
             <div class="team-tabs" id="scheduleTeamTabs"></div>
             <div class="schedule-content" id="scheduleContent"></div>
         </div>
