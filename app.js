@@ -1435,7 +1435,7 @@ function renderHomeMatches() {
     
     console.log('Date filter value:', dateFilter);
     
-    // Collect all matches with full details
+    // Collect all matches with ORIGINAL serial numbers (1-222)
     const allMatches = [];
     let serialNo = 1;
     
@@ -1448,7 +1448,7 @@ function renderHomeMatches() {
             const team2 = group.participants.find(p => p.teamId === match.opponent2);
             
             const matchData = {
-                serialNo: serialNo++,
+                originalSerialNo: serialNo, // KEEP ORIGINAL NUMBER (1-222)
                 groupName: groupName,
                 matchNo: match.matchNo,
                 team1Id: match.opponent1,
@@ -1501,6 +1501,8 @@ function renderHomeMatches() {
             if (include) {
                 allMatches.push(matchData);
             }
+            
+            serialNo++; // Increment for EVERY match (filtered or not)
         });
     });
     
@@ -1513,9 +1515,9 @@ function renderHomeMatches() {
         return new Date(a.date) - new Date(b.date);
     });
     
-    // Render table rows
+    // Render table rows using ORIGINAL serial numbers
     let html = '';
-    allMatches.forEach((match, index) => {
+    allMatches.forEach((match) => {
         const team1Players = `${match.team1Name1}${match.team1Name2 ? ' & ' + match.team1Name2 : ''}`;
         const team2Players = `${match.team2Name1}${match.team2Name2 ? ' & ' + match.team2Name2 : ''}`;
         
@@ -1543,7 +1545,7 @@ function renderHomeMatches() {
         
         html += `
             <tr>
-                <td><strong>${index + 1}</strong></td>
+                <td><strong>${match.originalSerialNo}</strong></td>
                 <td>Match ${match.matchNo}</td>
                 <td>
                     <strong>${match.team1Id}</strong><br>
@@ -1574,22 +1576,26 @@ function renderHomeMatches() {
 function jumpToMatch() {
     const matchNumber = parseInt(document.getElementById('quickMatchNumber').value);
     
-    if (!matchNumber || matchNumber < 1) {
-        alert('Please enter a valid match number');
+    if (!matchNumber || matchNumber < 1 || matchNumber > 222) {
+        alert('Please enter a valid match number (1-222)');
         return;
     }
     
-    // Find the match across all groups
+    // Find the match by global serial number from home schedule
     let foundMatch = null;
     let foundGroup = null;
+    let serialNo = 1;
     
     Object.keys(tournamentData).forEach(groupName => {
         const group = tournamentData[groupName];
-        const match = group.matches.find(m => m.matchNo === matchNumber);
-        if (match) {
-            foundMatch = match;
-            foundGroup = groupName;
-        }
+        
+        group.matches.forEach(match => {
+            if (serialNo === matchNumber) {
+                foundMatch = match;
+                foundGroup = groupName;
+            }
+            serialNo++;
+        });
     });
     
     if (!foundMatch) {
@@ -1601,7 +1607,7 @@ function jumpToMatch() {
     displayQuickMatchForm(foundGroup, foundMatch, matchNumber);
 }
 
-function displayQuickMatchForm(groupName, match, matchNumber) {
+function displayQuickMatchForm(groupName, match, globalMatchNo) {
     const formContainer = document.getElementById('quickMatchForm');
     const group = tournamentData[groupName];
     
@@ -1622,7 +1628,7 @@ function displayQuickMatchForm(groupName, match, matchNumber) {
             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                 <div>
                     <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">
-                        ⚡ Match #${matchNumber} - ${groupName}
+                        ⚡ Match #${globalMatchNo} - ${groupName}
                     </h3>
                     <p style="color: var(--text-light); margin: 0;">📅 ${formattedDate} | Status: ${status}</p>
                 </div>
@@ -1644,7 +1650,7 @@ function displayQuickMatchForm(groupName, match, matchNumber) {
             <div class="match-form">
                 <div class="form-group">
                     <label>Winner</label>
-                    <select id="quick_winner_${matchNumber}">
+                    <select id="quick_winner_${globalMatchNo}">
                         <option value="">Select Winner</option>
                         <option value="${match.opponent1}" ${match.winner === match.opponent1 ? 'selected' : ''}>${match.opponent1}</option>
                         <option value="${match.opponent2}" ${match.winner === match.opponent2 ? 'selected' : ''}>${match.opponent2}</option>
@@ -1653,7 +1659,7 @@ function displayQuickMatchForm(groupName, match, matchNumber) {
                 </div>
                 <div class="form-group">
                     <label>Runner-up</label>
-                    <select id="quick_runner_${matchNumber}">
+                    <select id="quick_runner_${globalMatchNo}">
                         <option value="">Select Runner</option>
                         <option value="${match.opponent1}" ${match.runner === match.opponent1 ? 'selected' : ''}>${match.opponent1}</option>
                         <option value="${match.opponent2}" ${match.runner === match.opponent2 ? 'selected' : ''}>${match.opponent2}</option>
@@ -1662,16 +1668,16 @@ function displayQuickMatchForm(groupName, match, matchNumber) {
                 </div>
                 <div class="form-group">
                     <label>Match Date</label>
-                    <input type="date" id="quick_date_${matchNumber}" value="${match.date || ''}" 
+                    <input type="date" id="quick_date_${globalMatchNo}" value="${match.date || ''}" 
                            min="2025-11-24" max="2025-12-10">
                 </div>
             </div>
             
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button onclick="saveQuickMatch('${groupName}', ${matchNumber})" class="btn btn-success" style="flex: 1;">
+                <button onclick="saveQuickMatch('${groupName}', ${match.matchNo}, ${globalMatchNo})" class="btn btn-success" style="flex: 1;">
                     💾 Save & Next Match
                 </button>
-                <button onclick="saveQuickMatch('${groupName}', ${matchNumber}, true)" class="btn btn-primary">
+                <button onclick="saveQuickMatch('${groupName}', ${match.matchNo}, ${globalMatchNo}, true)" class="btn btn-primary">
                     ✅ Save Only
                 </button>
             </div>
@@ -1682,10 +1688,10 @@ function displayQuickMatchForm(groupName, match, matchNumber) {
     formContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function saveQuickMatch(groupName, matchNumber, stayOnMatch = false) {
-    const winner = document.getElementById(`quick_winner_${matchNumber}`).value;
-    const runner = document.getElementById(`quick_runner_${matchNumber}`).value;
-    const date = document.getElementById(`quick_date_${matchNumber}`).value;
+function saveQuickMatch(groupName, groupMatchNo, globalMatchNo, stayOnMatch = false) {
+    const winner = document.getElementById(`quick_winner_${globalMatchNo}`).value;
+    const runner = document.getElementById(`quick_runner_${globalMatchNo}`).value;
+    const date = document.getElementById(`quick_date_${globalMatchNo}`).value;
     
     if (!winner || !runner) {
         alert('Please select both winner and runner-up');
@@ -1694,7 +1700,7 @@ function saveQuickMatch(groupName, matchNumber, stayOnMatch = false) {
     
     // Find and update the match
     const group = tournamentData[groupName];
-    const match = group.matches.find(m => m.matchNo === matchNumber);
+    const match = group.matches.find(m => m.matchNo === groupMatchNo);
     
     if (match) {
         match.winner = winner;
@@ -1712,9 +1718,15 @@ function saveQuickMatch(groupName, matchNumber, stayOnMatch = false) {
                 renderAllViews();
                 
                 if (!stayOnMatch) {
-                    // Move to next match
-                    document.getElementById('quickMatchNumber').value = matchNumber + 1;
-                    jumpToMatch();
+                    // Move to next match (global number)
+                    const nextGlobalNo = globalMatchNo + 1;
+                    if (nextGlobalNo <= 222) {
+                        document.getElementById('quickMatchNumber').value = nextGlobalNo;
+                        jumpToMatch();
+                    } else {
+                        alert('✅ All matches completed!');
+                        closeQuickMatchForm();
+                    }
                 } else {
                     closeQuickMatchForm();
                 }
