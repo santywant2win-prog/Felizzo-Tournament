@@ -68,6 +68,7 @@
             <button class="nav-btn active" data-view="home">🏠 Home</button>
             <button class="nav-btn" data-view="standings">📊 Standings</button>
             <button class="nav-btn" data-view="schedule">📅 Match Schedule</button>
+            <button class="nav-btn" data-view="participants">👥 Participants</button>
             <button class="nav-btn" data-view="overall">🏆 Overall Tournament</button>
         </nav>
 
@@ -192,6 +193,41 @@
             
             <div class="team-tabs" id="scheduleTeamTabs"></div>
             <div class="schedule-content" id="scheduleContent"></div>
+        </div>
+
+        <!-- Participants View -->
+        <div id="participantsView" class="view-container">
+            <div class="card">
+                <h2>👥 All Participants</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Complete list of all teams and players in the tournament
+                </p>
+                
+                <!-- Search -->
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="participantsSearch" placeholder="🔍 Search by team, player name, or manager..." 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+                
+                <div class="table-container">
+                    <table class="standings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Group</th>
+                                <th>Team ID</th>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Manager</th>
+                                <th style="display: none;" class="admin-only">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participantsTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Overall Tournament View -->

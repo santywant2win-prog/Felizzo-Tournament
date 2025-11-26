@@ -161,6 +161,7 @@ function renderAllViews() {
     renderHomeView();
     renderStandingsView();
     renderScheduleView();
+    renderParticipantsView();
     renderOverallView();
 }
 
@@ -327,6 +328,9 @@ function renderCurrentView() {
             break;
         case 'schedule':
             renderScheduleView();
+            break;
+        case 'participants':
+            renderParticipantsView();
             break;
         case 'overall':
             renderOverallView();
@@ -1745,6 +1749,121 @@ function copyTableToClipboard() {
     }).catch(err => {
         alert('Failed to copy. Please try selecting and copying manually.');
         console.error('Copy failed:', err);
+    });
+}
+
+// ============================================
+// PARTICIPANTS VIEW
+// ============================================
+
+function renderParticipantsView() {
+    if (!APP_STATE.dataLoaded) return;
+    
+    const tbody = document.getElementById('participantsTableBody');
+    const searchInput = document.getElementById('participantsSearch');
+    
+    if (!tbody) return;
+    
+    // Setup search listener
+    if (searchInput && !searchInput.dataset.listenerAdded) {
+        searchInput.addEventListener('input', renderParticipantsTable);
+        searchInput.dataset.listenerAdded = 'true';
+    }
+    
+    renderParticipantsTable();
+}
+
+function renderParticipantsTable() {
+    const tbody = document.getElementById('participantsTableBody');
+    const searchText = document.getElementById('participantsSearch')?.value.toLowerCase() || '';
+    
+    // Collect all participants
+    const allParticipants = [];
+    let serialNo = 1;
+    
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        
+        group.participants.forEach(participant => {
+            // Apply search filter
+            if (searchText) {
+                const searchString = `${groupName} ${participant.teamId} ${participant.name1} ${participant.name2} ${participant.manager}`.toLowerCase();
+                if (!searchString.includes(searchText)) {
+                    return;
+                }
+            }
+            
+            allParticipants.push({
+                serialNo: serialNo++,
+                groupName: groupName,
+                teamId: participant.teamId,
+                name1: participant.name1,
+                name2: participant.name2 || '',
+                manager: participant.manager
+            });
+        });
+    });
+    
+    // Render table rows
+    let html = '';
+    allParticipants.forEach(p => {
+        html += `
+            <tr>
+                <td><strong>${p.serialNo}</strong></td>
+                <td><strong>${p.groupName}</strong></td>
+                <td><span style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color);">${p.teamId}</span></td>
+                <td>${p.name1}</td>
+                <td>${p.name2 || '-'}</td>
+                <td>${p.manager}</td>
+                <td class="admin-only" style="display: none;">
+                    <button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" 
+                            onclick="editParticipant('${p.groupName}', '${p.teamId}')">
+                        ✏️ Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    if (allParticipants.length === 0) {
+        html = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-light);">No participants found</td></tr>';
+    }
+    
+    tbody.innerHTML = html;
+    
+    // Show/hide admin column
+    const adminCells = document.querySelectorAll('.admin-only');
+    adminCells.forEach(cell => {
+        cell.style.display = APP_STATE.isAdmin ? 'table-cell' : 'none';
+    });
+}
+
+function editParticipant(groupName, teamId) {
+    const group = tournamentData[groupName];
+    const participant = group.participants.find(p => p.teamId === teamId);
+    
+    if (!participant) return;
+    
+    const name1 = prompt(`Edit Player 1 name for Team ${teamId}:`, participant.name1);
+    if (name1 !== null && name1.trim() !== '') {
+        participant.name1 = name1.trim();
+    }
+    
+    const name2 = prompt(`Edit Player 2 name for Team ${teamId} (leave empty if solo):`, participant.name2 || '');
+    if (name2 !== null) {
+        participant.name2 = name2.trim();
+    }
+    
+    // Save to Firebase
+    updateSyncStatus('saving', '💾 Saving...');
+    saveToFirebase((success) => {
+        if (success) {
+            updateSyncStatus('synced', '✅ Saved!');
+            renderAllViews();
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        } else {
+            updateSyncStatus('error', '❌ Save failed');
+        }
     });
 }
 
