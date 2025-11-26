@@ -270,9 +270,28 @@ function updateAdminIndicator() {
         oldIndicator.remove();
     }
     
-    // Create fresh indicator
+    // Create fresh indicator with INLINE STYLES to force it
     const indicator = document.createElement('div');
     indicator.className = 'admin-mode';
+    
+    // FORCE small styles inline
+    indicator.style.cssText = `
+        position: fixed !important;
+        bottom: 110px !important;
+        right: 20px !important;
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+        color: white !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 0.5rem !important;
+        font-weight: 700 !important;
+        font-size: 0.75rem !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+        z-index: 999 !important;
+        letter-spacing: 1px !important;
+        width: auto !important;
+        max-width: fit-content !important;
+    `;
+    
     document.body.appendChild(indicator);
     
     const resetAllBtn = document.getElementById('resetAllBtn');
@@ -285,7 +304,8 @@ function updateAdminIndicator() {
     
     if (APP_STATE.isAdmin) {
         indicator.textContent = '🔓 SU';
-        indicator.classList.add('active');
+        indicator.style.opacity = '1';
+        indicator.style.animation = 'pulse 2s infinite';
         resetAllBtn.style.display = 'inline-block';
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
@@ -295,7 +315,7 @@ function updateAdminIndicator() {
         if (quickMatchJump) quickMatchJump.style.display = 'block';
     } else {
         indicator.textContent = '👁️ VIEW';
-        indicator.classList.remove('active');
+        indicator.style.opacity = '0.4';
         resetAllBtn.style.display = 'none';
         backupBtn.style.display = 'none';
         restoreBtn.style.display = 'none';
