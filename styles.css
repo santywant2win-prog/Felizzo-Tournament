@@ -906,14 +906,75 @@ header h1 {
 /* ==================== PRINT STYLES ==================== */
 @media print {
     body {
-        background: white;
-        color: black;
+        background: white !important;
+        color: black !important;
     }
     
+    /* Hide non-essential elements */
     .header-buttons,
     .main-nav,
     .btn,
-    .admin-mode {
+    .admin-mode,
+    .sync-status,
+    .footer-trademark,
+    .floating-corner-btn,
+    .filters-container,
+    #quickMatchJump,
+    #quickMatchForm {
         display: none !important;
+    }
+    
+    /* Show only home view */
+    #homeView {
+        display: block !important;
+    }
+    
+    #standingsView,
+    #scheduleView,
+    #overallView {
+        display: none !important;
+    }
+    
+    /* Clean table for printing */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        background: white !important;
+        page-break-inside: avoid;
+    }
+    
+    .standings-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    .standings-table th,
+    .standings-table td {
+        border: 1px solid #333 !important;
+        padding: 8px !important;
+        color: black !important;
+        background: white !important;
+    }
+    
+    .standings-table th {
+        background: #f0f0f0 !important;
+        font-weight: bold !important;
+    }
+    
+    .match-status {
+        border: 1px solid #333 !important;
+        padding: 2px 6px !important;
+        background: white !important;
+        color: black !important;
+    }
+    
+    /* Page breaks */
+    .card {
+        page-break-after: auto;
+    }
+    
+    h2 {
+        color: black !important;
+        page-break-after: avoid;
     }
 }

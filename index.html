@@ -73,11 +73,43 @@
 
         <!-- Home View (Schedule) -->
         <div id="homeView" class="view-container active">
+            <!-- Quick Match Jump (Admin Only) -->
+            <div id="quickMatchJump" class="card" style="display: none; background: linear-gradient(135deg, var(--accent-color), #7c3aed); margin-bottom: 1rem;">
+                <div style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label style="color: white;">⚡ Quick Match Update</label>
+                        <input type="number" id="quickMatchNumber" placeholder="Enter match #" 
+                               style="font-size: 1.1rem; padding: 0.75rem;"
+                               onkeypress="if(event.key==='Enter') jumpToMatch()">
+                    </div>
+                    <button onclick="jumpToMatch()" class="btn btn-success" style="margin: 0;">
+                        🎯 Jump to Match
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Match Update Form (Shows when match selected) -->
+            <div id="quickMatchForm" class="card" style="display: none;">
+                <!-- Populated by JavaScript -->
+            </div>
+            
             <div class="card">
-                <h2>📅 Complete Match Schedule</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    All 222 league matches scheduled from November 24 to December 10, 2025
-                </p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>📅 Complete Match Schedule</h2>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            All 222 league matches scheduled from November 24 to December 10, 2025
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="window.print()" class="btn btn-secondary">
+                            🖨️ Print
+                        </button>
+                        <button onclick="copyTableToClipboard()" class="btn btn-secondary">
+                            📧 Copy for Email
+                        </button>
+                    </div>
+                </div>
                 
                 <!-- Filters -->
                 <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">

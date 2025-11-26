@@ -267,6 +267,7 @@ function updateAdminIndicator() {
     const populateDatesBtn = document.getElementById('populateDatesBtn');
     const adminBtn = document.getElementById('adminBtn');
     const viewModeBtn = document.getElementById('viewModeBtn');
+    const quickMatchJump = document.getElementById('quickMatchJump');
     
     if (!indicator) {
         indicator = document.createElement('div');
@@ -283,6 +284,7 @@ function updateAdminIndicator() {
         populateDatesBtn.style.display = 'inline-block';
         adminBtn.style.display = 'none';
         viewModeBtn.style.display = 'block';
+        if (quickMatchJump) quickMatchJump.style.display = 'block';
     } else {
         indicator.textContent = '👁️ View Mode';
         indicator.classList.remove('active');
@@ -292,6 +294,7 @@ function updateAdminIndicator() {
         populateDatesBtn.style.display = 'none';
         adminBtn.style.display = 'block';
         viewModeBtn.style.display = 'none';
+        if (quickMatchJump) quickMatchJump.style.display = 'none';
     }
 }
 
@@ -1524,6 +1527,227 @@ function renderHomeMatches() {
     
     tbody.innerHTML = html;
 }
+
+// ============================================
+// QUICK MATCH JUMP & UPDATE
+// ============================================
+
+function jumpToMatch() {
+    const matchNumber = parseInt(document.getElementById('quickMatchNumber').value);
+    
+    if (!matchNumber || matchNumber < 1) {
+        alert('Please enter a valid match number');
+        return;
+    }
+    
+    // Find the match across all groups
+    let foundMatch = null;
+    let foundGroup = null;
+    
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        const match = group.matches.find(m => m.matchNo === matchNumber);
+        if (match) {
+            foundMatch = match;
+            foundGroup = groupName;
+        }
+    });
+    
+    if (!foundMatch) {
+        alert(`Match #${matchNumber} not found!`);
+        return;
+    }
+    
+    // Display the match update form
+    displayQuickMatchForm(foundGroup, foundMatch, matchNumber);
+}
+
+function displayQuickMatchForm(groupName, match, matchNumber) {
+    const formContainer = document.getElementById('quickMatchForm');
+    const group = tournamentData[groupName];
+    
+    // Get team details
+    const team1 = group.participants.find(p => p.teamId === match.opponent1);
+    const team2 = group.participants.find(p => p.teamId === match.opponent2);
+    
+    const team1Players = `${team1?.name1 || 'Unknown'}${team1?.name2 ? ' & ' + team1.name2 : ''}`;
+    const team2Players = `${team2?.name1 || 'Unknown'}${team2?.name2 ? ' & ' + team2.name2 : ''}`;
+    
+    const status = getMatchStatus(match);
+    const formattedDate = match.date 
+        ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'Not scheduled';
+    
+    formContainer.innerHTML = `
+        <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1)); padding: 1.5rem; border-radius: 0.75rem; border: 2px solid var(--primary-color);">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">
+                        ⚡ Match #${matchNumber} - ${groupName}
+                    </h3>
+                    <p style="color: var(--text-light); margin: 0;">📅 ${formattedDate} | Status: ${status}</p>
+                </div>
+                <button onclick="closeQuickMatchForm()" class="btn btn-secondary" style="padding: 0.5rem 1rem;">✕</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+                <div style="text-align: center; padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${match.opponent1}</div>
+                    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">${team1Players}</div>
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-secondary);">VS</div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary-color);">${match.opponent2}</div>
+                    <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;">${team2Players}</div>
+                </div>
+            </div>
+            
+            <div class="match-form">
+                <div class="form-group">
+                    <label>Winner</label>
+                    <select id="quick_winner_${matchNumber}">
+                        <option value="">Select Winner</option>
+                        <option value="${match.opponent1}" ${match.winner === match.opponent1 ? 'selected' : ''}>${match.opponent1}</option>
+                        <option value="${match.opponent2}" ${match.winner === match.opponent2 ? 'selected' : ''}>${match.opponent2}</option>
+                        <option value="draw" ${match.winner === 'draw' ? 'selected' : ''}>Draw</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Runner-up</label>
+                    <select id="quick_runner_${matchNumber}">
+                        <option value="">Select Runner</option>
+                        <option value="${match.opponent1}" ${match.runner === match.opponent1 ? 'selected' : ''}>${match.opponent1}</option>
+                        <option value="${match.opponent2}" ${match.runner === match.opponent2 ? 'selected' : ''}>${match.opponent2}</option>
+                        <option value="draw" ${match.runner === 'draw' ? 'selected' : ''}>Draw</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Match Date</label>
+                    <input type="date" id="quick_date_${matchNumber}" value="${match.date || ''}" 
+                           min="2025-11-24" max="2025-12-10">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button onclick="saveQuickMatch('${groupName}', ${matchNumber})" class="btn btn-success" style="flex: 1;">
+                    💾 Save & Next Match
+                </button>
+                <button onclick="saveQuickMatch('${groupName}', ${matchNumber}, true)" class="btn btn-primary">
+                    ✅ Save Only
+                </button>
+            </div>
+        </div>
+    `;
+    
+    formContainer.style.display = 'block';
+    formContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveQuickMatch(groupName, matchNumber, stayOnMatch = false) {
+    const winner = document.getElementById(`quick_winner_${matchNumber}`).value;
+    const runner = document.getElementById(`quick_runner_${matchNumber}`).value;
+    const date = document.getElementById(`quick_date_${matchNumber}`).value;
+    
+    if (!winner || !runner) {
+        alert('Please select both winner and runner-up');
+        return;
+    }
+    
+    // Find and update the match
+    const group = tournamentData[groupName];
+    const match = group.matches.find(m => m.matchNo === matchNumber);
+    
+    if (match) {
+        match.winner = winner;
+        match.runner = runner;
+        match.date = date;
+        match.draw = (winner === 'draw' && runner === 'draw') ? 'yes' : '';
+        
+        updateSyncStatus('saving', '💾 Saving...');
+        
+        saveToFirebase((success) => {
+            if (success) {
+                updateSyncStatus('synced', '✅ Saved!');
+                
+                // Refresh views
+                renderAllViews();
+                
+                if (!stayOnMatch) {
+                    // Move to next match
+                    document.getElementById('quickMatchNumber').value = matchNumber + 1;
+                    jumpToMatch();
+                } else {
+                    closeQuickMatchForm();
+                }
+                
+                setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+            } else {
+                updateSyncStatus('error', '❌ Save failed');
+            }
+        });
+    }
+}
+
+function closeQuickMatchForm() {
+    document.getElementById('quickMatchForm').style.display = 'none';
+    document.getElementById('quickMatchNumber').value = '';
+}
+
+// ============================================
+// COPY TABLE FOR EMAIL
+// ============================================
+
+function copyTableToClipboard() {
+    const table = document.getElementById('scheduleTable');
+    
+    if (!table) {
+        alert('No table found!');
+        return;
+    }
+    
+    // Create a clean text version
+    let text = 'FELIZZO \'25 Carrom Tournament - Match Schedule\n';
+    text += 'November 24 - December 10, 2025\n';
+    text += '='.repeat(80) + '\n\n';
+    
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('th, td');
+        let rowText = [];
+        
+        cells.forEach(cell => {
+            // Get text content, clean up
+            let cellText = cell.textContent.trim().replace(/\s+/g, ' ');
+            rowText.push(cellText);
+        });
+        
+        text += rowText.join('\t') + '\n';
+        
+        // Add separator after header
+        if (index === 0) {
+            text += '-'.repeat(80) + '\n';
+        }
+    });
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success message
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        btn.style.background = 'var(--success-color)';
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+        }, 2000);
+    }).catch(err => {
+        alert('Failed to copy. Please try selecting and copying manually.');
+        console.error('Copy failed:', err);
+    });
+}
+
 
 function handlePopulateDates() {
     if (!confirm('⚠️ This will populate/update dates for ALL matches. Continue?')) {
