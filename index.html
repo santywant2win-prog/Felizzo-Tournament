@@ -67,10 +67,39 @@
 
         <!-- Main Navigation -->
         <nav class="main-nav">
-            <button class="nav-btn active" data-view="standings">Standings</button>
-            <button class="nav-btn" data-view="schedule">Match Schedule</button>
-            <button class="nav-btn" data-view="overall">Overall Tournament</button>
+            <button class="nav-btn active" data-view="home">🏠 Home</button>
+            <button class="nav-btn" data-view="standings">📊 Standings</button>
+            <button class="nav-btn" data-view="schedule">📅 Match Schedule</button>
+            <button class="nav-btn" data-view="overall">🏆 Overall Tournament</button>
         </nav>
+
+        <!-- Home View (Schedule) -->
+        <div id="homeView" class="view-container active">
+            <div class="card">
+                <h2>📅 Complete Match Schedule</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    All 222 league matches scheduled from November 24 to December 10, 2024
+                </p>
+                <div class="table-container">
+                    <table class="standings-table" id="scheduleTable">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Match</th>
+                                <th>Team 1</th>
+                                <th>Team 2</th>
+                                <th>Group</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Standings View -->
         <div id="standingsView" class="view-container active">

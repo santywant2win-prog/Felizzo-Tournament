@@ -2,7 +2,7 @@
 // Application State
 const APP_STATE = {
     isAdmin: false,
-    currentView: 'standings',
+    currentView: 'home',
     currentTeam: null,
     adminPassword: 'f25',
     dataLoaded: false,
@@ -89,9 +89,13 @@ function loadDataFromFirebase() {
 
 function initializeFirebaseData() {
     console.log('Initializing Firebase with default tournament data...');
+    
+    // Pre-populate dates before saving
+    populateMatchDates();
+    
     tournamentRef.set(tournamentData)
         .then(() => {
-            console.log('Firebase initialized successfully!');
+            console.log('Firebase initialized successfully with dates!');
             APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
             renderAllViews();
@@ -154,6 +158,7 @@ function renderAllViews() {
         APP_STATE.currentTeam = firstTeam;
     }
     
+    renderHomeView();
     renderStandingsView();
     renderScheduleView();
     renderOverallView();
@@ -298,6 +303,9 @@ function switchView(view) {
 
 function renderCurrentView() {
     switch(APP_STATE.currentView) {
+        case 'home':
+            renderHomeView();
+            break;
         case 'standings':
             renderStandingsView();
             break;
@@ -1151,4 +1159,174 @@ function autoBackupBeforeAction(actionName) {
     
     return success;
 }
+
+// ============================================
+// DATE POPULATION & HOME VIEW
+// ============================================
+
+function populateMatchDates() {
+    console.log('Populating match dates...');
+    
+    // Date range: Nov 24 - Dec 10, 2024
+    const startDate = new Date('2024-11-24');
+    const endDate = new Date('2024-12-10');
+    
+    // Generate all dates
+    const dates = [];
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 5 = Friday
+        const isFriday = (dayOfWeek === 5);
+        const matchCount = isFriday ? 20 : 15;
+        
+        dates.push({
+            date: currentDate.toISOString().split('T')[0],
+            isFriday: isFriday,
+            matchCount: matchCount,
+            assigned: 0
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Collect all matches from all groups
+    const allMatches = [];
+    Object.keys(tournamentData).forEach(groupName => {
+        tournamentData[groupName].matches.forEach((match, index) => {
+            allMatches.push({
+                groupName: groupName,
+                matchIndex: index,
+                match: match
+            });
+        });
+    });
+    
+    console.log(`Total matches to schedule: ${allMatches.length}`);
+    
+    // Assign dates to matches
+    let matchIndex = 0;
+    let dateIndex = 0;
+    
+    while (matchIndex < allMatches.length && dateIndex < dates.length) {
+        const currentDateObj = dates[dateIndex];
+        
+        if (currentDateObj.assigned < currentDateObj.matchCount) {
+            // Assign this date to the match
+            allMatches[matchIndex].match.date = currentDateObj.date;
+            currentDateObj.assigned++;
+            matchIndex++;
+        } else {
+            // Move to next date
+            dateIndex++;
+        }
+    }
+    
+    // If we still have matches left (shouldn't happen with current numbers)
+    if (matchIndex < allMatches.length) {
+        console.warn(`Warning: ${allMatches.length - matchIndex} matches could not be scheduled`);
+        // Assign remaining matches to last date
+        const lastDate = dates[dates.length - 1].date;
+        while (matchIndex < allMatches.length) {
+            allMatches[matchIndex].match.date = lastDate;
+            matchIndex++;
+        }
+    }
+    
+    console.log('Match dates populated successfully!');
+}
+
+function renderHomeView() {
+    if (!APP_STATE.dataLoaded) return;
+    
+    const tbody = document.getElementById('scheduleTableBody');
+    if (!tbody) return;
+    
+    // Collect all matches with full details
+    const allMatches = [];
+    let serialNo = 1;
+    
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        
+        group.matches.forEach(match => {
+            // Get participant details
+            const team1 = group.participants.find(p => p.teamId === match.opponent1);
+            const team2 = group.participants.find(p => p.teamId === match.opponent2);
+            
+            allMatches.push({
+                serialNo: serialNo++,
+                groupName: groupName,
+                matchNo: match.matchNo,
+                team1Id: match.opponent1,
+                team1Name1: team1?.name1 || 'Unknown',
+                team1Name2: team1?.name2 || '',
+                team2Id: match.opponent2,
+                team2Name1: team2?.name1 || 'Unknown',
+                team2Name2: team2?.name2 || '',
+                date: match.date || 'Not scheduled',
+                winner: match.winner,
+                runner: match.runner,
+                draw: match.draw
+            });
+        });
+    });
+    
+    // Sort by date
+    allMatches.sort((a, b) => {
+        if (a.date === 'Not scheduled') return 1;
+        if (b.date === 'Not scheduled') return -1;
+        return new Date(a.date) - new Date(b.date);
+    });
+    
+    // Render table rows
+    let html = '';
+    allMatches.forEach(match => {
+        const team1Players = `${match.team1Name1}${match.team1Name2 ? ' & ' + match.team1Name2 : ''}`;
+        const team2Players = `${match.team2Name1}${match.team2Name2 ? ' & ' + match.team2Name2 : ''}`;
+        
+        // Determine status
+        let status = 'Pending';
+        let statusClass = 'pending';
+        if (match.winner && match.runner) {
+            if (match.winner === match.runner) {
+                status = 'Draw';
+                statusClass = 'draw';
+            } else {
+                status = 'Completed';
+                statusClass = 'completed';
+            }
+        }
+        
+        // Format date
+        const formattedDate = match.date !== 'Not scheduled' 
+            ? new Date(match.date).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })
+            : match.date;
+        
+        html += `
+            <tr>
+                <td><strong>${match.serialNo}</strong></td>
+                <td>Match ${match.matchNo}</td>
+                <td>
+                    <strong>${match.team1Id}</strong><br>
+                    <span style="font-size: 0.85rem; color: var(--text-light);">${team1Players}</span>
+                </td>
+                <td>
+                    <strong>${match.team2Id}</strong><br>
+                    <span style="font-size: 0.85rem; color: var(--text-light);">${team2Players}</span>
+                </td>
+                <td><strong>${match.groupName}</strong></td>
+                <td>${formattedDate}</td>
+                <td><span class="match-status ${statusClass}">${status}</span></td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
 
