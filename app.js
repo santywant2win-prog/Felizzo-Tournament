@@ -8,7 +8,8 @@ const APP_STATE = {
     dataLoaded: false,
     isOnline: true,
     resetAction: null, // stores pending reset action
-    firstBackupDone: false // tracks if initial backup was created
+    firstBackupDone: false, // tracks if initial backup was created
+    deferredPrompt: null // stores PWA install prompt
 };
 
 // Store original data for reset functionality
@@ -24,6 +25,8 @@ const POINTS = {
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
+    registerServiceWorker();
+    setupInstallPrompt();
 });
 
 function initializeApp() {
@@ -1893,3 +1896,94 @@ function handlePopulateDates() {
 }
 
 
+
+// ============================================
+// PWA SUPPORT - MAKE IT AN APP!
+// ============================================
+
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('✅ PWA: Service Worker registered!');
+            })
+            .catch(error => {
+                console.log('❌ PWA: Service Worker registration failed:', error);
+            });
+    }
+}
+
+function setupInstallPrompt() {
+    // Capture install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        APP_STATE.deferredPrompt = e;
+        showInstallButton();
+    });
+    
+    // Track successful install
+    window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA: App installed successfully!');
+        APP_STATE.deferredPrompt = null;
+        hideInstallButton();
+    });
+}
+
+function showInstallButton() {
+    // Create install button
+    let installBtn = document.getElementById('pwaInstallBtn');
+    
+    if (!installBtn) {
+        installBtn = document.createElement('button');
+        installBtn.id = 'pwaInstallBtn';
+        installBtn.className = 'floating-corner-btn';
+        installBtn.style.cssText = `
+            position: fixed;
+            bottom: 220px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            animation: pulse 2s infinite;
+        `;
+        installBtn.innerHTML = '📱 Install App';
+        installBtn.onclick = installPWA;
+        document.body.appendChild(installBtn);
+    }
+}
+
+function hideInstallButton() {
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (installBtn) {
+        installBtn.remove();
+    }
+}
+
+function installPWA() {
+    const promptEvent = APP_STATE.deferredPrompt;
+    
+    if (!promptEvent) {
+        return;
+    }
+    
+    // Show install prompt
+    promptEvent.prompt();
+    
+    // Wait for user choice
+    promptEvent.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+            console.log('✅ User accepted PWA install');
+        } else {
+            console.log('❌ User dismissed PWA install');
+        }
+        APP_STATE.deferredPrompt = null;
+        hideInstallButton();
+    });
+}
