@@ -1385,6 +1385,8 @@ function renderHomeMatches() {
     const dateFilter = document.getElementById('homeFilterDate')?.value || '';
     const searchText = document.getElementById('homeSearchText')?.value.toLowerCase() || '';
     
+    console.log('Date filter value:', dateFilter);
+    
     // Collect all matches with full details
     const allMatches = [];
     let serialNo = 1;
@@ -1407,7 +1409,7 @@ function renderHomeMatches() {
                 team2Id: match.opponent2,
                 team2Name1: team2?.name1 || 'Unknown',
                 team2Name2: team2?.name2 || '',
-                date: match.date || 'Not scheduled',
+                date: match.date || '',
                 winner: match.winner,
                 runner: match.runner,
                 draw: match.draw
@@ -1432,13 +1434,10 @@ function renderHomeMatches() {
                 }
             }
             
-            // Date filter
+            // Date filter - FIX: Compare dates properly
             if (dateFilter) {
-                // Normalize both dates to YYYY-MM-DD format for comparison
-                const matchDate = matchData.date === 'Not scheduled' ? '' : matchData.date;
-                if (matchDate && matchDate !== dateFilter) {
-                    include = false;
-                } else if (!matchDate) {
+                console.log('Comparing:', matchData.date, '===', dateFilter);
+                if (matchData.date !== dateFilter) {
                     include = false;
                 }
             }
@@ -1457,10 +1456,12 @@ function renderHomeMatches() {
         });
     });
     
+    console.log('Matches after filter:', allMatches.length);
+    
     // Sort by date
     allMatches.sort((a, b) => {
-        if (a.date === 'Not scheduled') return 1;
-        if (b.date === 'Not scheduled') return -1;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
         return new Date(a.date) - new Date(b.date);
     });
     
@@ -1484,13 +1485,13 @@ function renderHomeMatches() {
         }
         
         // Format date
-        const formattedDate = match.date !== 'Not scheduled' 
+        const formattedDate = match.date 
             ? new Date(match.date).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 year: 'numeric' 
               })
-            : match.date;
+            : 'Not scheduled';
         
         html += `
             <tr>

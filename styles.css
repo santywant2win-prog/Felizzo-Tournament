@@ -615,7 +615,7 @@ header h1 {
 /* ==================== ADMIN MODE ==================== */
 .admin-mode {
     position: fixed;
-    top: 20px;
+    bottom: 60px;
     right: 20px;
     background: linear-gradient(135deg, var(--accent-color), #7c3aed);
     color: white;
@@ -623,22 +623,10 @@ header h1 {
     border-radius: 2rem;
     font-weight: 700;
     box-shadow: var(--shadow-elevated);
-    display: block; /* Always visible now */
+    display: block;
     z-index: 999;
-    animation: slideInRight 0.5s ease;
     opacity: 0.3;
     transition: opacity 0.3s ease;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 0.3;
-    }
 }
 
 .admin-mode.active {
@@ -649,7 +637,7 @@ header h1 {
 /* ==================== SYNC STATUS ==================== */
 .sync-status {
     position: fixed;
-    top: 75px;
+    top: 20px;
     right: 20px;
     padding: 0.75rem 1.25rem;
     border-radius: 2rem;
