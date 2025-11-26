@@ -1967,17 +1967,22 @@ function showInstallButton() {
             right: 20px;
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
-            padding: 1rem 2rem;
+            padding: 0.75rem;
             border: none;
-            border-radius: 2rem;
+            border-radius: 50%;
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 1.5rem;
             cursor: pointer;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
             z-index: 998;
             animation: pulse 2s infinite;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
-        installBtn.innerHTML = '📱 Install App';
+        installBtn.innerHTML = '📱';
         installBtn.onclick = installPWA;
         document.body.appendChild(installBtn);
     }

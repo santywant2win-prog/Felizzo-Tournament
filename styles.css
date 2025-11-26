@@ -641,16 +641,20 @@ header h1 {
     position: fixed;
     bottom: 160px;
     right: 20px;
-    padding: 1rem 2rem;
+    padding: 0.75rem;
     border: none;
-    border-radius: 2rem;
+    border-radius: 50%;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.5rem;
     cursor: pointer;
     box-shadow: var(--shadow-elevated);
     z-index: 998;
     transition: all 0.3s ease;
-    white-space: nowrap;
+    width: 3.5rem;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .floating-corner-btn.admin-btn {
@@ -659,7 +663,7 @@ header h1 {
 }
 
 .floating-corner-btn.admin-btn:hover {
-    transform: translateY(-3px);
+    transform: translateY(-3px) scale(1.1);
     box-shadow: 0 0 25px rgba(139, 92, 246, 0.6), var(--shadow-elevated);
 }
 
@@ -670,7 +674,7 @@ header h1 {
 }
 
 .floating-corner-btn.view-btn:hover {
-    transform: translateY(-3px);
+    transform: translateY(-3px) scale(1.1);
     background: var(--bg-hover);
     box-shadow: 0 0 25px rgba(14, 165, 233, 0.4), var(--shadow-elevated);
 }
@@ -831,20 +835,19 @@ header h1 {
     .floating-corner-btn {
         bottom: 130px;
         right: 10px;
-        left: 10px;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-        text-align: center;
-        border-radius: 1rem;
+        width: 3rem;
+        height: 3rem;
+        padding: 0.5rem;
+        font-size: 1.3rem;
     }
     
     #pwaInstallBtn {
         bottom: 190px !important;
         right: 10px;
-        left: 10px;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-        text-align: center;
+        width: 3rem !important;
+        height: 3rem !important;
+        padding: 0.5rem !important;
+        font-size: 1.3rem !important;
     }
     
     .sync-status {
@@ -904,14 +907,20 @@ header h1 {
     
     .floating-corner-btn {
         bottom: 110px;
-        font-size: 0.85rem;
-        padding: 0.65rem 0.85rem;
+        right: 10px;
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1.2rem;
+        padding: 0.4rem;
     }
     
     #pwaInstallBtn {
         bottom: 160px !important;
-        font-size: 0.85rem;
-        padding: 0.65rem 0.85rem;
+        right: 10px;
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        font-size: 1.2rem !important;
+        padding: 0.4rem !important;
     }
     
     .footer-trademark {
