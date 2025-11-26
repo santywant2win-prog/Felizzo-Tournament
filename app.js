@@ -166,6 +166,7 @@ function renderAllViews() {
     renderScheduleView();
     renderParticipantsView();
     renderKnockoutView();
+    renderChamberView();
     renderOverallView();
 }
 
@@ -362,6 +363,9 @@ function renderCurrentView() {
             break;
         case 'knockout':
             renderKnockoutView();
+            break;
+        case 'chamber':
+            renderChamberView();
             break;
         case 'overall':
             renderOverallView();
@@ -2387,15 +2391,78 @@ function setKnockoutWinner(round, matchNo, winner) {
             
             // Advance to Round of 16
             const r16Index = Math.floor((matchNo - 1) / 2);
+            const winnerTeam = winner === match.team1.teamId ? match.team1 : match.team2;
+            
             if (!knockoutData.bracket.round16[r16Index]) {
-                knockoutData.bracket.round16[r16Index] = { teams: [], winner: null };
+                knockoutData.bracket.round16[r16Index] = {
+                    matchNo: r16Index + 1,
+                    team1: null,
+                    team2: null,
+                    winner: null
+                };
             }
-            knockoutData.bracket.round16[r16Index].teams.push(winner);
+            
+            // Assign to team1 or team2 based on match order
+            if ((matchNo - 1) % 2 === 0) {
+                knockoutData.bracket.round16[r16Index].team1 = winnerTeam;
+            } else {
+                knockoutData.bracket.round16[r16Index].team2 = winnerTeam;
+            }
         }
     }
     
     alert(`✅ ${winner} advances!`);
     renderBracket();
+    renderChamberView();
+}
+
+function setChamberWinner(round, matchNo, winner) {
+    let match, nextRound, nextIndex;
+    
+    if (round === 16) {
+        match = knockoutData.bracket.round16[matchNo - 1];
+        nextRound = knockoutData.bracket.quarterFinals;
+        nextIndex = Math.floor((matchNo - 1) / 2);
+    } else if (round === 8) {
+        match = knockoutData.bracket.quarterFinals[matchNo - 1];
+        nextRound = knockoutData.bracket.semiFinals;
+        nextIndex = Math.floor((matchNo - 1) / 2);
+    } else if (round === 4) {
+        match = knockoutData.bracket.semiFinals[matchNo - 1];
+        nextRound = [knockoutData.bracket.final];
+        nextIndex = 0;
+    } else if (round === 2) {
+        knockoutData.bracket.final.winner = winner;
+        knockoutData.bracket.winner = winner;
+        alert(`🏆 TOURNAMENT CHAMPION: ${winner}! 🏆`);
+        renderChamberView();
+        return;
+    }
+    
+    if (match) {
+        match.winner = winner;
+        const winnerTeam = winner === match.team1.teamId ? match.team1 : match.team2;
+        
+        // Create next match if doesn't exist
+        if (!nextRound[nextIndex]) {
+            nextRound[nextIndex] = {
+                matchNo: nextIndex + 1,
+                team1: null,
+                team2: null,
+                winner: null
+            };
+        }
+        
+        // Assign to team1 or team2
+        if ((matchNo - 1) % 2 === 0) {
+            nextRound[nextIndex].team1 = winnerTeam;
+        } else {
+            nextRound[nextIndex].team2 = winnerTeam;
+        }
+    }
+    
+    alert(`✅ ${winner} advances!`);
+    renderChamberView();
 }
 
 function resetKnockout() {
@@ -2409,5 +2476,162 @@ function resetKnockout() {
     
     alert('✅ Knockout stage reset!');
     renderKnockoutView();
+}
+
+
+// ============================================
+// ELIMINATION CHAMBER VIEW
+// ============================================
+
+function renderChamberView() {
+    const container = document.getElementById('chamberDisplay');
+    if (!container) return;
+    
+    if (!knockoutData.bracket || !knockoutData.bracket.round16) {
+        container.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <p>Complete Round of 32 first to unlock the Elimination Chamber!</p>
+                <p style="margin-top: 0.5rem;">Go to <strong>🏆 Knockout</strong> tab to set up the bracket.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const bracket = knockoutData.bracket;
+    let html = '';
+    
+    // Round of 16
+    html += renderChamberRound('🔥 ROUND OF 16', bracket.round16, 16, 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1))', '#ef4444');
+    
+    // Quarter Finals
+    html += renderChamberRound('⚡ QUARTER FINALS', bracket.quarterFinals, 8, 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(234, 88, 12, 0.1))', '#f97316');
+    
+    // Semi Finals
+    html += renderChamberRound('💥 SEMI FINALS', bracket.semiFinals, 4, 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.1))', '#a855f7');
+    
+    // Final
+    if (bracket.final) {
+        html += renderFinalMatch(bracket.final, bracket.winner);
+    }
+    
+    container.innerHTML = html;
+}
+
+function renderChamberRound(title, matches, round, bgGradient, color) {
+    if (!matches || matches.length === 0 || !matches[0] || (!matches[0].team1 && !matches[0].team2)) {
+        return '';
+    }
+    
+    let html = `
+        <div style="margin-bottom: 3rem;">
+            <h3 style="color: ${color}; font-size: 1.75rem; text-align: center; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">${title}</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+    `;
+    
+    matches.forEach(match => {
+        if (!match || (!match.team1 && !match.team2)) return;
+        
+        html += `
+            <div style="padding: 1.5rem; background: ${bgGradient}; border-radius: 1rem; border: 3px solid ${color}; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <div style="text-align: center; font-weight: 700; color: ${color}; font-size: 1.1rem; margin-bottom: 1rem; text-transform: uppercase;">Match ${match.matchNo}</div>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        `;
+        
+        if (match.team1) {
+            html += `
+                <div style="padding: 1rem; background: ${match.winner === match.team1.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))' : 'var(--bg-dark)'}; border-radius: 0.75rem; border: 3px solid ${match.winner === match.team1.teamId ? '#10b981' : 'transparent'}; transition: all 0.3s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-color);">${match.team1.teamId}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.25rem;">${match.team1.groupName}</div>
+                        </div>
+                        ${APP_STATE.isAdmin && !match.winner ? `
+                            <button onclick="setChamberWinner(${round}, ${match.matchNo}, '${match.team1.teamId}')" class="btn btn-success" style="padding: 0.5rem 1rem;">✓ WIN</button>
+                        ` : ''}
+                        ${match.winner === match.team1.teamId ? '<div style="font-size: 2rem;">🏆</div>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '<div style="text-align: center; color: ' + color + '; font-weight: 700; font-size: 1.2rem;">VS</div>';
+        
+        if (match.team2) {
+            html += `
+                <div style="padding: 1rem; background: ${match.winner === match.team2.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))' : 'var(--bg-dark)'}; border-radius: 0.75rem; border: 3px solid ${match.winner === match.team2.teamId ? '#10b981' : 'transparent'}; transition: all 0.3s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: var(--secondary-color);">${match.team2.teamId}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.25rem;">${match.team2.groupName}</div>
+                        </div>
+                        ${APP_STATE.isAdmin && !match.winner ? `
+                            <button onclick="setChamberWinner(${round}, ${match.matchNo}, '${match.team2.teamId}')" class="btn btn-success" style="padding: 0.5rem 1rem;">✓ WIN</button>
+                        ` : ''}
+                        ${match.winner === match.team2.teamId ? '<div style="font-size: 2rem;">🏆</div>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    return html;
+}
+
+function renderFinalMatch(final, champion) {
+    if (!final || (!final.team1 && !final.team2)) {
+        return '';
+    }
+    
+    return `
+        <div style="margin-top: 3rem; padding: 3rem; background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(202, 138, 4, 0.2)); border-radius: 1.5rem; border: 4px solid #eab308; box-shadow: 0 20px 50px rgba(234, 179, 8, 0.4);">
+            <h2 style="color: #eab308; font-size: 2.5rem; text-align: center; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 3px;">
+                🏆 GRAND FINAL 🏆
+            </h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem; align-items: center; max-width: 1000px; margin: 0 auto;">
+                ${final.team1 ? `
+                    <div style="text-align: center; padding: 2rem; background: ${final.winner === final.team1.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(5, 150, 105, 0.4))' : 'var(--bg-dark)'}; border-radius: 1rem; border: 4px solid ${final.winner === final.team1.teamId ? '#10b981' : '#eab308'};">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;">${final.team1.teamId}</div>
+                        <div style="font-size: 1rem; color: var(--text-light); margin-bottom: 1rem;">${final.team1.groupName}</div>
+                        ${APP_STATE.isAdmin && !final.winner ? `
+                            <button onclick="setChamberWinner(2, 1, '${final.team1.teamId}')" class="btn btn-success" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
+                                👑 CHAMPION
+                            </button>
+                        ` : ''}
+                        ${final.winner === final.team1.teamId ? '<div style="font-size: 4rem; margin-top: 1rem;">🏆</div>' : ''}
+                    </div>
+                ` : '<div></div>'}
+                
+                <div style="font-size: 3rem; font-weight: 700; color: #eab308;">VS</div>
+                
+                ${final.team2 ? `
+                    <div style="text-align: center; padding: 2rem; background: ${final.winner === final.team2.teamId ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(5, 150, 105, 0.4))' : 'var(--bg-dark)'}; border-radius: 1rem; border: 4px solid ${final.winner === final.team2.teamId ? '#10b981' : '#eab308'};">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 0.5rem;">${final.team2.teamId}</div>
+                        <div style="font-size: 1rem; color: var(--text-light); margin-bottom: 1rem;">${final.team2.groupName}</div>
+                        ${APP_STATE.isAdmin && !final.winner ? `
+                            <button onclick="setChamberWinner(2, 1, '${final.team2.teamId}')" class="btn btn-success" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
+                                👑 CHAMPION
+                            </button>
+                        ` : ''}
+                        ${final.winner === final.team2.teamId ? '<div style="font-size: 4rem; margin-top: 1rem;">🏆</div>' : ''}
+                    </div>
+                ` : '<div></div>'}
+            </div>
+            
+            ${champion ? `
+                <div style="margin-top: 3rem; text-align: center; padding: 2rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3)); border-radius: 1rem; border: 3px solid #10b981;">
+                    <div style="font-size: 1.5rem; color: #10b981; font-weight: 700; margin-bottom: 1rem;">🏆 TOURNAMENT CHAMPION 🏆</div>
+                    <div style="font-size: 3rem; font-weight: 700; color: var(--primary-color);">${champion}</div>
+                    <div style="font-size: 1.5rem; margin-top: 1rem;">🎉 CONGRATULATIONS! 🎉</div>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
