@@ -1165,7 +1165,7 @@ function autoBackupBeforeAction(actionName) {
 // ============================================
 
 function populateMatchDates() {
-    console.log('Populating match dates...');
+    console.log('Populating match dates with round-robin scheduling...');
     
     // Date range: Nov 24 - Dec 10, 2024
     const startDate = new Date('2024-11-24');
@@ -1190,50 +1190,65 @@ function populateMatchDates() {
         currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // Collect all matches from all groups
-    const allMatches = [];
-    Object.keys(tournamentData).forEach(groupName => {
-        tournamentData[groupName].matches.forEach((match, index) => {
-            allMatches.push({
-                groupName: groupName,
-                matchIndex: index,
-                match: match
-            });
-        });
+    // Organize matches by group for round-robin rotation
+    const groupNames = Object.keys(tournamentData);
+    const groupMatches = {};
+    
+    groupNames.forEach(groupName => {
+        groupMatches[groupName] = tournamentData[groupName].matches.map((match, index) => ({
+            groupName: groupName,
+            matchIndex: index,
+            match: match
+        }));
     });
     
-    console.log(`Total matches to schedule: ${allMatches.length}`);
+    // Find max matches in any group
+    let maxMatchesPerGroup = 0;
+    groupNames.forEach(groupName => {
+        if (groupMatches[groupName].length > maxMatchesPerGroup) {
+            maxMatchesPerGroup = groupMatches[groupName].length;
+        }
+    });
     
-    // Assign dates to matches
-    let matchIndex = 0;
+    console.log(`Max matches per group: ${maxMatchesPerGroup}`);
+    console.log(`Total groups: ${groupNames.length}`);
+    
+    // Round-robin scheduling: rotate through groups
     let dateIndex = 0;
+    let scheduledCount = 0;
     
-    while (matchIndex < allMatches.length && dateIndex < dates.length) {
-        const currentDateObj = dates[dateIndex];
-        
-        if (currentDateObj.assigned < currentDateObj.matchCount) {
-            // Assign this date to the match
-            allMatches[matchIndex].match.date = currentDateObj.date;
-            currentDateObj.assigned++;
-            matchIndex++;
-        } else {
-            // Move to next date
-            dateIndex++;
+    // For each round (0 to maxMatchesPerGroup)
+    for (let round = 0; round < maxMatchesPerGroup; round++) {
+        // For each group in order
+        for (let groupIndex = 0; groupIndex < groupNames.length; groupIndex++) {
+            const groupName = groupNames[groupIndex];
+            const matches = groupMatches[groupName];
+            
+            // If this group has a match for this round
+            if (round < matches.length) {
+                // Find next available date slot
+                while (dateIndex < dates.length && dates[dateIndex].assigned >= dates[dateIndex].matchCount) {
+                    dateIndex++;
+                }
+                
+                if (dateIndex >= dates.length) {
+                    console.warn('Ran out of dates! Adding to last date.');
+                    dateIndex = dates.length - 1;
+                }
+                
+                // Assign date
+                const currentDateObj = dates[dateIndex];
+                matches[round].match.date = currentDateObj.date;
+                currentDateObj.assigned++;
+                scheduledCount++;
+                
+                console.log(`Scheduled: ${groupName} Match ${round + 1} on ${currentDateObj.date} (${currentDateObj.assigned}/${currentDateObj.matchCount})`);
+            }
         }
     }
     
-    // If we still have matches left (shouldn't happen with current numbers)
-    if (matchIndex < allMatches.length) {
-        console.warn(`Warning: ${allMatches.length - matchIndex} matches could not be scheduled`);
-        // Assign remaining matches to last date
-        const lastDate = dates[dates.length - 1].date;
-        while (matchIndex < allMatches.length) {
-            allMatches[matchIndex].match.date = lastDate;
-            matchIndex++;
-        }
-    }
-    
-    console.log('Match dates populated successfully!');
+    console.log(`Total matches scheduled: ${scheduledCount}`);
+    console.log('Match dates populated with round-robin rotation!');
 }
 
 function renderHomeView() {
