@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">FELIZZO '25 Tournament</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1 id="sportTitle">🎯 Loading...</h1>
+            <div class="header-buttons">
+                <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Back to Hub</button>
+                <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
+                <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
+                <input type="file" id="restoreFile" accept=".json" style="display:none;">
+            </div>
+        </header>
+
+        <!-- Setup View (First time) -->
+        <div id="setupView" class="view-container active">
+            <div class="card">
+                <h2>🚀 Tournament Setup</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Let's set up your tournament! Choose how you want to add participants.
+                </p>
+
+                <!-- Setup Options -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="setup-option" onclick="showCSVImport()">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+                        <h3>Import from CSV</h3>
+                        <p>Upload a CSV file with your teams</p>
+                    </div>
+                    
+                    <div class="setup-option" onclick="showManualEntry()">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">✍️</div>
+                        <h3>Manual Entry</h3>
+                        <p>Enter teams one by one</p>
+                    </div>
+                </div>
+
+                <!-- CSV Import Section -->
+                <div id="csvImportSection" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">📁 CSV Import</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        Format: Team ID, Player 1, Player 2 (optional), Manager, Group
+                    </p>
+                    <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 1rem;">
+                    <button onclick="importCSV()" class="btn btn-primary">Upload & Import</button>
+                </div>
+
+                <!-- Manual Entry Section -->
+                <div id="manualEntrySection" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">✍️ Manual Entry</h3>
+                    
+                    <div class="form-group">
+                        <label>Quick Entry (One line per team)</label>
+                        <textarea id="quickEntryText" rows="10" placeholder="Format: TeamID, Player1, Player2, Manager, Group
+Example:
+A, John, Sarah, Mike, Group 1
+B, David, , Lisa, Group 1
+C, Emma, Tom, Alex, Group 2" style="width: 100%; padding: 1rem; background: var(--bg-dark); border: 2px solid var(--border-color); border-radius: 0.5rem; color: white; font-family: monospace;"></textarea>
+                    </div>
+                    
+                    <button onclick="processQuickEntry()" class="btn btn-primary">Add All Teams</button>
+                </div>
+
+                <!-- Preview Section -->
+                <div id="previewSection" style="display: none; margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">👀 Preview</h3>
+                    <div id="previewContent"></div>
+                    <div style="margin-top: 1.5rem;">
+                        <button onclick="generateMatches()" class="btn btn-success">🎲 Generate Matches</button>
+                        <button onclick="resetSetup()" class="btn btn-secondary" style="margin-left: 0.5rem;">🔄 Start Over</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Tournament View (After setup) -->
+        <div id="tournamentView" class="view-container" style="display: none;">
+            <!-- Navigation will be injected here -->
+            <nav class="main-nav" id="mainNav"></nav>
+            
+            <!-- Content containers will be injected dynamically -->
+            <div id="dynamicContent"></div>
+        </div>
+    </div>
+
+    <!-- Fixed Position Badges -->
+    <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
+    
+    <!-- Floating Corner Buttons -->
+    <button id="adminBtn" class="floating-corner-btn admin-btn">🔐</button>
+    <button id="viewModeBtn" class="floating-corner-btn view-btn" style="display:none;">👁️</button>
+
+    <!-- Footer Trademark -->
+    <div class="footer-trademark">
+        Created with <span class="heart">❤️</span> by Santo's Claude
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="../firebase-config.js"></script>
+    <script src="sport-engine.js"></script>
+
+    <style>
+        .setup-option {
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1));
+            border: 2px solid var(--border-color);
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .setup-option:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);
+        }
+        
+        .setup-option h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .setup-option p {
+            color: var(--text-secondary);
+        }
+    </style>
+</body>
+</html>

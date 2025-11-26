@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FELIZZO '25 Sports Championship</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Official multi-sport tournament management platform for FELIZZO '25">
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FELIZZO '25">
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+        }
+        
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .sport-card {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1));
+            border: 2px solid rgba(14, 165, 233, 0.3);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .sport-card:hover {
+            transform: translateY(-10px);
+            border-color: #0ea5e9;
+            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+        }
+        
+        .sport-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .sport-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sport-status {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        
+        .sport-status.active {
+            color: #10b981;
+        }
+        
+        .admin-section {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1));
+            border-radius: 1rem;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+        }
+        
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #64748b;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .sports-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .sport-card {
+                padding: 1.5rem;
+            }
+            
+            .sport-icon {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 FELIZZO '25</h1>
+            <p class="subtitle">Multi-Sport Championship Platform</p>
+        </header>
+        
+        <div class="sports-grid">
+            <a href="../" class="sport-card">
+                <div class="sport-icon">🎯</div>
+                <div class="sport-name">Carrom</div>
+                <div class="sport-status active">✅ Active</div>
+            </a>
+            
+            <a href="sport.html?game=chess" class="sport-card">
+                <div class="sport-icon">♟️</div>
+                <div class="sport-name">Chess</div>
+                <div class="sport-status">🔧 Setup</div>
+            </a>
+            
+            <a href="sport.html?game=snooker" class="sport-card">
+                <div class="sport-icon">🎱</div>
+                <div class="sport-name">Snooker</div>
+                <div class="sport-status">🔧 Setup</div>
+            </a>
+            
+            <a href="sport.html?game=foosball" class="sport-card">
+                <div class="sport-icon">⚽</div>
+                <div class="sport-name">Foosball</div>
+                <div class="sport-status">🔧 Setup</div>
+            </a>
+            
+            <a href="sport.html?game=badminton" class="sport-card">
+                <div class="sport-icon">🏸</div>
+                <div class="sport-name">Badminton</div>
+                <div class="sport-status">🔧 Setup</div>
+            </a>
+            
+            <a href="sport.html?game=tabletennis" class="sport-card">
+                <div class="sport-icon">🏓</div>
+                <div class="sport-name">Table Tennis</div>
+                <div class="sport-status">🔧 Setup</div>
+            </a>
+        </div>
+        
+        <div class="admin-section">
+            <h3 style="margin-bottom: 1rem;">🔐 Admin Panel</h3>
+            <p style="margin-bottom: 1.5rem; color: #94a3b8;">Manage all sports, add new tournaments, view analytics</p>
+            <button class="btn" onclick="alert('Admin panel coming soon!')">Access Admin Panel</button>
+        </div>
+        
+        <footer>
+            <p>Created with ❤️ by Santo's Claude</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">FELIZZO '25 Sports Championship</p>
+        </footer>
+    </div>
+</body>
+</html>
