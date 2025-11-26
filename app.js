@@ -4,7 +4,7 @@ const APP_STATE = {
     isAdmin: false,
     currentView: 'home',
     currentTeam: null,
-    adminPassword: 'f25',
+    adminPassword: 'f25ca',
     dataLoaded: false,
     isOnline: true,
     resetAction: null, // stores pending reset action
