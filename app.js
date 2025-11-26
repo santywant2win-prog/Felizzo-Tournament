@@ -600,8 +600,11 @@ function renderTeamSchedule(teamName) {
         }
         
         // Date filter
-        if (dateFilter && match.date !== dateFilter) {
-            include = false;
+        if (dateFilter) {
+            const matchDate = match.date || '';
+            if (matchDate !== dateFilter) {
+                include = false;
+            }
         }
         
         // Search filter
@@ -1430,8 +1433,14 @@ function renderHomeMatches() {
             }
             
             // Date filter
-            if (dateFilter && matchData.date !== dateFilter) {
-                include = false;
+            if (dateFilter) {
+                // Normalize both dates to YYYY-MM-DD format for comparison
+                const matchDate = matchData.date === 'Not scheduled' ? '' : matchData.date;
+                if (matchDate && matchDate !== dateFilter) {
+                    include = false;
+                } else if (!matchDate) {
+                    include = false;
+                }
             }
             
             // Search filter
