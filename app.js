@@ -264,7 +264,17 @@ function handleLogin() {
 }
 
 function updateAdminIndicator() {
-    let indicator = document.querySelector('.admin-mode');
+    // Remove any existing indicator first
+    const oldIndicator = document.querySelector('.admin-mode');
+    if (oldIndicator) {
+        oldIndicator.remove();
+    }
+    
+    // Create fresh indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'admin-mode';
+    document.body.appendChild(indicator);
+    
     const resetAllBtn = document.getElementById('resetAllBtn');
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
@@ -272,12 +282,6 @@ function updateAdminIndicator() {
     const adminBtn = document.getElementById('adminBtn');
     const viewModeBtn = document.getElementById('viewModeBtn');
     const quickMatchJump = document.getElementById('quickMatchJump');
-    
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.className = 'admin-mode';
-        document.body.appendChild(indicator);
-    }
     
     if (APP_STATE.isAdmin) {
         indicator.textContent = '🔓 SU';
