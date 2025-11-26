@@ -269,17 +269,18 @@ function updateAdminIndicator() {
     if (!indicator) {
         indicator = document.createElement('div');
         indicator.className = 'admin-mode';
-        indicator.textContent = '🔓 Admin Mode';
         document.body.appendChild(indicator);
     }
     
     if (APP_STATE.isAdmin) {
+        indicator.textContent = '🔓 Admin Mode';
         indicator.classList.add('active');
         resetAllBtn.style.display = 'inline-block';
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
         populateDatesBtn.style.display = 'inline-block';
     } else {
+        indicator.textContent = '👁️ View Mode';
         indicator.classList.remove('active');
         resetAllBtn.style.display = 'none';
         backupBtn.style.display = 'none';
