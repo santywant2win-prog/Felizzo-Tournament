@@ -2804,6 +2804,7 @@ function addNewTeamToGroup(groupName, newTeam) {
             updateSyncStatus('synced', '✅ Team added!');
             alert(`✅ Success!\n\n• Added team ${newTeam.teamId} to ${groupName}\n• Generated ${newMatches.length} new matches\n• Match numbers: ${newMatches[0].matchNo} - ${newMatches[newMatches.length - 1].matchNo}\n• Total matches now: ${getTotalMatches()}`);
             renderAllViews();
+            updateTotalMatchCount(); // Force update count display
             setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
         } else {
             updateSyncStatus('error', '❌ Failed to add team');
@@ -2880,4 +2881,24 @@ function getTotalMatches() {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initializeAddTeamButtons, 1000);
 });
+
+
+// ============================================
+// UPDATE TOTAL MATCH COUNT DISPLAY
+// ============================================
+
+function updateTotalMatchCount() {
+    const countElement = document.getElementById('totalMatchCount');
+    if (countElement) {
+        const total = getTotalMatches();
+        countElement.textContent = `All ${total} league matches`;
+    }
+}
+
+// Call this when rendering home view
+const originalRenderHomeMatches = renderHomeMatches;
+renderHomeMatches = function() {
+    originalRenderHomeMatches();
+    updateTotalMatchCount();
+};
 
