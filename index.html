@@ -3,350 +3,395 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FELIZZO '25 Carrom Tournament</title>
+    <title>FELIZZO '25 - All Sports Championship</title>
     
-    <!-- PWA Meta Tags -->
-    <meta name="description" content="Official tournament management app for FELIZZO '25 Carrom Championship">
-    <meta name="theme-color" content="#0ea5e9">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FELIZZO '25">
-    <link rel="manifest" href="/manifest.json">
-    
-    <!-- iOS Icon -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230ea5e9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='280' fill='white'%3E🏆%3C/text%3E%3C/svg%3E">
-    
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+            animation: fadeInDown 1s;
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.4em;
+            opacity: 0.95;
+        }
+
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .sport-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sport-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .sport-card:hover::before {
+            left: 100%;
+        }
+
+        .sport-card:hover {
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+        }
+
+        .sport-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            display: block;
+            animation: bounce 2s infinite;
+        }
+
+        .sport-card h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .sport-card p {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .sport-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        /* Sport-specific colors */
+        .carrom { border-top: 5px solid #0ea5e9; }
+        .carrom .sport-badge { background: #0ea5e9; color: white; }
+
+        .chess { border-top: 5px solid #8b5cf6; }
+        .chess .sport-badge { background: #8b5cf6; color: white; }
+
+        .snooker { border-top: 5px solid #10b981; }
+        .snooker .sport-badge { background: #10b981; color: white; }
+
+        .foosball { border-top: 5px solid #3b82f6; }
+        .foosball .sport-badge { background: #3b82f6; color: white; }
+
+        .badminton { border-top: 5px solid #f59e0b; }
+        .badminton .sport-badge { background: #f59e0b; color: white; }
+
+        .tabletennis { border-top: 5px solid #ef4444; }
+        .tabletennis .sport-badge { background: #ef4444; color: white; }
+
+        .info-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            min-width: 50px;
+        }
+
+        .feature-text h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.2em;
+        }
+
+        .feature-text p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 60px;
+            padding: 30px;
+            font-size: 1.1em;
+        }
+
+        .footer .heart {
+            color: #ef4444;
+            animation: heartbeat 1.5s infinite;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .sports-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sport-card {
+                padding: 30px;
+            }
+        }
+
+        .status-live {
+            background: #10b981;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .glow {
+            animation: glow-pulse 2s infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            50% { 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 30px rgba(102, 126, 234, 0.6);
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🏆 FELIZZO '25 Carrom Tournament</h1>
-            <div class="header-buttons">
-                <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
-                <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
-                <input type="file" id="restoreFile" accept=".json" style="display:none;">
-                <button id="populateDatesBtn" class="btn btn-secondary" style="display:none;">🔄 Populate Dates</button>
-                <button id="addTeamBtn" class="btn btn-primary" style="display:none;">➕ Add Team</button>
-                <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
-            </div>
-        </header>
-
-        <!-- Admin Login Modal -->
-        <div id="adminModal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2>Admin Login</h2>
-                <input type="password" id="adminPassword" placeholder="Enter password">
-                <button id="loginBtn" class="btn btn-primary">Login</button>
-                <p id="loginError" class="error-message"></p>
-            </div>
+        <div class="header">
+            <h1>🏆 FELIZZO '25</h1>
+            <p>Multi-Sport Championship Platform</p>
         </div>
 
-        <!-- Reset Confirmation Modal -->
-        <div id="resetModal" class="modal">
-            <div class="modal-content">
-                <span class="close-reset">&times;</span>
-                <h2>⚠️ Confirm Reset</h2>
-                <p id="resetMessage" style="margin: 1rem 0; font-size: 1rem;"></p>
-                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                    <button id="confirmResetBtn" class="btn btn-danger">Yes, Reset</button>
-                    <button id="cancelResetBtn" class="btn btn-secondary">Cancel</button>
-                </div>
-            </div>
+        <div class="sports-grid">
+            <!-- Carrom -->
+            <a href="/carrom.html" class="sport-card carrom glow">
+                <span class="sport-icon">🎯</span>
+                <h2>Carrom</h2>
+                <p>Strike & Pocket Championship</p>
+                <span class="status-live">● LIVE NOW</span>
+            </a>
+
+            <!-- Chess -->
+            <a href="/chess/" class="sport-card chess">
+                <span class="sport-icon">♟️</span>
+                <h2>Chess</h2>
+                <p>Strategic Board Battles</p>
+                <span class="sport-badge">Royal Purple</span>
+            </a>
+
+            <!-- Snooker -->
+            <a href="/snooker/" class="sport-card snooker">
+                <span class="sport-icon">🎱</span>
+                <h2>Snooker</h2>
+                <p>Precision Cue Sports</p>
+                <span class="sport-badge">Velvet Green</span>
+            </a>
+
+            <!-- Foosball -->
+            <a href="/foosball/" class="sport-card foosball">
+                <span class="sport-icon">⚽</span>
+                <h2>Foosball</h2>
+                <p>Table Soccer Showdown</p>
+                <span class="sport-badge">Electric Blue</span>
+            </a>
+
+            <!-- Badminton -->
+            <a href="/badminton/" class="sport-card badminton">
+                <span class="sport-icon">🏸</span>
+                <h2>Badminton</h2>
+                <p>Racquet Sport Excellence</p>
+                <span class="sport-badge">Sunny Yellow</span>
+            </a>
+
+            <!-- Table Tennis -->
+            <a href="/tabletennis/" class="sport-card tabletennis">
+                <span class="sport-icon">🏓</span>
+                <h2>Table Tennis</h2>
+                <p>Fast-Paced Ping Pong</p>
+                <span class="sport-badge">Blazing Red</span>
+            </a>
         </div>
 
-        <!-- First Backup Required Modal -->
-        <div id="firstBackupModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <h2>⚠️ BACKUP REQUIRED</h2>
-                <p style="margin: 1.5rem 0; font-size: 1.1rem; line-height: 1.6;">
-                    <strong>This is your first admin login!</strong><br><br>
-                    Before managing tournament data, you must create a backup file. 
-                    This protects against accidental data loss.<br><br>
-                    Click the button below to download your backup file. 
-                    Save it somewhere safe (Desktop, Google Drive, etc.).
-                </p>
-                <button id="firstBackupBtn" class="btn btn-success" style="font-size: 1.1rem; padding: 1rem 2rem;" onclick="handleFirstBackup()">
-                    📥 Download Backup Now
-                </button>
-                <p style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
-                    You won't be able to use admin features until backup is created.
-                </p>
-            </div>
-        </div>
+        <div class="info-section">
+            <h3>🎮 Platform Features</h3>
+            <div class="features">
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <div class="feature-text">
+                        <h4>Live Standings</h4>
+                        <p>Real-time tournament rankings and statistics</p>
+                    </div>
+                </div>
 
-        <!-- Main Navigation -->
-        <nav class="main-nav">
-            <button class="nav-btn active" data-view="home">🏠 Home</button>
-            <button class="nav-btn" data-view="standings">📊 Standings</button>
-            <button class="nav-btn" data-view="schedule">📅 Match Schedule</button>
-            <button class="nav-btn" data-view="participants">👥 Participants</button>
-            <button class="nav-btn" data-view="knockout">🏆 Knockout</button>
-            <button class="nav-btn" data-view="chamber">⚡ Elimination Chamber</button>
-            <button class="nav-btn" data-view="overall">🏆 Overall Tournament</button>
-        </nav>
+                <div class="feature-item">
+                    <span class="feature-icon">📅</span>
+                    <div class="feature-text">
+                        <h4>Match Schedule</h4>
+                        <p>Complete fixture list with dates and results</p>
+                    </div>
+                </div>
 
-        <!-- Home View (Schedule) -->
-        <div id="homeView" class="view-container active">
-            <!-- Quick Match Jump (Admin Only) -->
-            <div id="quickMatchJump" class="card" style="display: none; background: linear-gradient(135deg, var(--accent-color), #7c3aed); margin-bottom: 1rem;">
-                <div style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
-                        <label style="color: white;">⚡ Quick Match Update</label>
-                        <input type="number" id="quickMatchNumber" placeholder="Enter match #" 
-                               style="font-size: 1.1rem; padding: 0.75rem;"
-                               onkeypress="if(event.key==='Enter') jumpToMatch()">
+                <div class="feature-item">
+                    <span class="feature-icon">🔥</span>
+                    <div class="feature-text">
+                        <h4>Firebase Sync</h4>
+                        <p>Cloud-powered real-time data synchronization</p>
                     </div>
-                    <button onclick="jumpToMatch()" class="btn btn-success" style="margin: 0;">
-                        🎯 Jump to Match
-                    </button>
                 </div>
-            </div>
 
-            <!-- Quick Match Update Form (Shows when match selected) -->
-            <div id="quickMatchForm" class="card" style="display: none;">
-                <!-- Populated by JavaScript -->
-            </div>
-            
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h2>📅 Complete Match Schedule</h2>
-                        <p style="color: var(--text-secondary); margin: 0;">
-                            <span id="totalMatchCount">All 222 league matches</span> scheduled from November 24 to December 10, 2025
-                        </p>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="window.print()" class="btn btn-secondary">
-                            🖨️ Print
-                        </button>
-                        <button onclick="copyTableToClipboard()" class="btn btn-secondary">
-                            📧 Copy for Email
-                        </button>
+                <div class="feature-item">
+                    <span class="feature-icon">📱</span>
+                    <div class="feature-text">
+                        <h4>Mobile Ready</h4>
+                        <p>Install as app on any device - works offline!</p>
                     </div>
                 </div>
-                
-                <!-- Filters -->
-                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label>Filter by Group</label>
-                        <select id="homeFilterGroup" class="filter-select">
-                            <option value="">All Groups</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Filter by Status</label>
-                        <select id="homeFilterStatus" class="filter-select">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="draw">Draw</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Filter by Date</label>
-                        <input type="date" id="homeFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
-                    </div>
-                    <div class="form-group">
-                        <label>Search Players/Teams</label>
-                        <input type="text" id="homeSearchText" class="filter-select" placeholder="Type to search...">
+
+                <div class="feature-item">
+                    <span class="feature-icon">🎨</span>
+                    <div class="feature-text">
+                        <h4>Glossy Themes</h4>
+                        <p>Unique visual identity for each sport</p>
                     </div>
                 </div>
-                
-                <!-- Filter Summary -->
-                <div id="filterSummary" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 0.75rem; border: 2px solid var(--primary-color);">
-                    <h4 style="color: var(--primary-color); margin-bottom: 1rem; font-size: 1rem;">📊 Filtered Results Summary</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; text-align: center;">
-                        <div>
-                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);" id="summaryTotal">0</div>
-                            <div style="font-size: 0.85rem; color: var(--text-light);">Total</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2rem; font-weight: 700; color: #10b981;" id="summaryCompleted">0</div>
-                            <div style="font-size: 0.85rem; color: var(--text-light);">Completed</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;" id="summaryPending">0</div>
-                            <div style="font-size: 0.85rem; color: var(--text-light);">Pending</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2rem; font-weight: 700; color: #6366f1;" id="summaryDraw">0</div>
-                            <div style="font-size: 0.85rem; color: var(--text-light);">Draws</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-color);" id="summaryPercentage">0%</div>
-                            <div style="font-size: 0.85rem; color: var(--text-light);">Complete</div>
-                        </div>
+
+                <div class="feature-item">
+                    <span class="feature-icon">⚡</span>
+                    <div class="feature-text">
+                        <h4>Quick Updates</h4>
+                        <p>Fast match result entry and instant sync</p>
                     </div>
-                </div>
-                
-                <div class="table-container">
-                    <table class="standings-table" id="scheduleTable">
-                        <thead>
-                            <tr>
-                                <th>S.No</th>
-                                <th>Match</th>
-                                <th>Team 1</th>
-                                <th>Team 2</th>
-                                <th>Group</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="scheduleTableBody">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Standings View -->
-        <div id="standingsView" class="view-container active">
-            <div class="team-tabs" id="teamTabs"></div>
-            <div class="team-content" id="teamContent"></div>
+        <div class="info-section" style="margin-top: 30px;">
+            <h3>👥 How to Participate</h3>
+            <ol style="color: #666; font-size: 1.1em; line-height: 2; padding-left: 40px;">
+                <li>Click on your sport above</li>
+                <li>View current standings and schedule</li>
+                <li>Coordinators: Login to update match results</li>
+                <li>Install as app on mobile for quick access</li>
+                <li>Check back regularly for live updates!</li>
+            </ol>
         </div>
 
-        <!-- Schedule View -->
-        <div id="scheduleView" class="view-container">
-            <!-- Filters -->
-            <div class="card" style="margin-bottom: 1rem;">
-                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div class="form-group">
-                        <label>Filter by Status</label>
-                        <select id="scheduleFilterStatus" class="filter-select">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending Only</option>
-                            <option value="completed">Completed Only</option>
-                            <option value="draw">Draw Only</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Filter by Date</label>
-                        <input type="date" id="scheduleFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
-                    </div>
-                    <div class="form-group">
-                        <label>Search Players/Teams</label>
-                        <input type="text" id="scheduleSearchText" class="filter-select" placeholder="Type to search...">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="team-tabs" id="scheduleTeamTabs"></div>
-            <div class="schedule-content" id="scheduleContent"></div>
-        </div>
-
-        <!-- Participants View -->
-        <div id="participantsView" class="view-container">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <div>
-                        <h2>👥 All Participants</h2>
-                        <p style="color: var(--text-secondary); margin: 0;">
-                            Complete list of all teams and players in the tournament
-                        </p>
-                    </div>
-                    <button id="addTeamBtnParticipants" class="btn btn-primary" style="display: none;">
-                        ➕ Add New Team
-                    </button>
-                </div>
-                
-                <!-- Search -->
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <input type="text" id="participantsSearch" placeholder="🔍 Search by team, player name, or manager..." 
-                           style="font-size: 1rem; padding: 0.75rem;">
-                </div>
-                
-                <div class="table-container">
-                    <table class="standings-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Group</th>
-                                <th>Team ID</th>
-                                <th>Player 1</th>
-                                <th>Player 2</th>
-                                <th>Manager</th>
-                                <th style="display: none;" class="admin-only">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="participantsTableBody">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Knockout View -->
-        <div id="knockoutView" class="view-container">
-            <div class="card">
-                <h2>🏆 Knockout Stage - Round of 32</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    32 qualified teams competing in single-elimination bracket
-                </p>
-                
-                <!-- Admin Controls -->
-                <div id="knockoutAdminControls" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border-radius: 0.75rem;">
-                    <button onclick="calculateQualifiedTeams()" class="btn btn-primary">
-                        📊 Calculate Qualified Teams
-                    </button>
-                    <button onclick="generateBracket()" class="btn btn-success" style="margin-left: 0.5rem;">
-                        🎲 Generate Bracket
-                    </button>
-                    <button onclick="resetKnockout()" class="btn btn-danger" style="margin-left: 0.5rem;">
-                        🔄 Reset Knockout
-                    </button>
-                </div>
-                
-                <!-- Qualification Status -->
-                <div id="qualificationStatus"></div>
-                
-                <!-- Bracket Display -->
-                <div id="bracketDisplay"></div>
-            </div>
-        </div>
-
-        <!-- Elimination Chamber View -->
-        <div id="chamberView" class="view-container">
-            <div class="card">
-                <h2>⚡ ELIMINATION CHAMBER</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    Round of 16 → Quarter Finals → Semi Finals → GRAND FINAL
-                </p>
-                
-                <!-- Chamber Display -->
-                <div id="chamberDisplay"></div>
-            </div>
-        </div>
-
-        <!-- Overall Tournament View -->
-        <div id="overallView" class="view-container">
-            <h2>Overall Tournament Standings</h2>
-            <div id="overallStandings"></div>
+        <div class="footer">
+            <p>Created with <span class="heart">❤️</span> for FELIZZO '25</p>
+            <p style="margin-top: 10px; opacity: 0.8; font-size: 0.9em;">
+                6 Sports • 11 Teams • Unlimited Passion
+            </p>
         </div>
     </div>
 
-    <!-- Fixed Position Badges -->
-    <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
-    
-    <!-- Floating Corner Buttons -->
-    <button id="adminBtn" class="floating-corner-btn admin-btn">🔐</button>
-    <button id="viewModeBtn" class="floating-corner-btn view-btn" style="display:none;">👁️</button>
+    <script>
+        // Add click animation
+        document.querySelectorAll('.sport-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
 
-    <!-- Footer Trademark -->
-    <div class="footer-trademark">
-        Created with <span class="heart">❤️</span> by Santo's Claude
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    
-    <!-- Your App Files -->
-    <script src="firebase-config.js"></script>
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+        // Console easter egg
+        console.log('%c🏆 FELIZZO \'25 Multi-Sport Platform', 'font-size: 20px; color: #667eea; font-weight: bold;');
+        console.log('%cBuilt with ❤️ by Santo\'s Claude', 'font-size: 14px; color: #764ba2;');
+    </script>
 </body>
 </html>
