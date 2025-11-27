@@ -3,136 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">FELIZZO '25 Tournament</title>
-    <link rel="stylesheet" href="../styles.css">
+    <title id="sportTitle">FELIZZO '25 Tournament Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .sport-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .setup-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .setup-section {
+            display: none;
+        }
+
+        .setup-section.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group textarea,
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: 'Courier New', monospace;
+        }
+
+        .input-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .csv-help {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .csv-help code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .manual-entry {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .preview-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .preview-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .team-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .team-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .team-card strong {
+            display: block;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .matches-summary {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .matches-summary h2 {
+            color: #28a745;
+            font-size: 2em;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <header>
-            <h1 id="sportTitle">🎯 Loading...</h1>
-            <div class="header-buttons">
-                <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Back to Hub</button>
-                <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
-                <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
-                <input type="file" id="restoreFile" accept=".json" style="display:none;">
+        <a href="index.html" class="back-link">← Back to Sports</a>
+        
+        <div class="header">
+            <div class="sport-icon" id="sportIcon">🎯</div>
+            <h1 id="sportName">Tournament Setup</h1>
+            <p>Set up your tournament in 3 easy steps</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <div class="setup-tabs">
+            <button class="tab active" data-tab="import">📥 Import CSV</button>
+            <button class="tab" data-tab="manual">✍️ Manual Entry</button>
+            <button class="tab" data-tab="preview">👁️ Preview & Generate</button>
+        </div>
+
+        <!-- CSV Import Section -->
+        <div id="import" class="setup-section active">
+            <div class="csv-help">
+                <strong>📋 CSV Format:</strong><br>
+                <code>TeamID, Player1, Player2, Manager, Group</code><br><br>
+                <strong>Example:</strong><br>
+                <code>A, John Doe, Jane Smith, Manager1, Group 1</code><br>
+                <code>B, Mike Ross, , Manager2, Group 1</code><br>
+                <code>C, Sarah Lee, Tom Chen, Manager3, Group 2</code>
             </div>
-        </header>
 
-        <!-- Setup View (First time) -->
-        <div id="setupView" class="view-container active">
-            <div class="card">
-                <h2>🚀 Tournament Setup</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Let's set up your tournament! Choose how you want to add participants.
-                </p>
+            <div class="input-group">
+                <label>Paste your CSV data:</label>
+                <textarea id="csvInput" placeholder="A, John Doe, Jane Smith, Manager1, Group 1
+B, Mike Ross, , Manager2, Group 1
+C, Sarah Lee, Tom Chen, Manager3, Group 2"></textarea>
+            </div>
 
-                <!-- Setup Options -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                    <div class="setup-option" onclick="showCSVImport()">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
-                        <h3>Import from CSV</h3>
-                        <p>Upload a CSV file with your teams</p>
-                    </div>
-                    
-                    <div class="setup-option" onclick="showManualEntry()">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">✍️</div>
-                        <h3>Manual Entry</h3>
-                        <p>Enter teams one by one</p>
-                    </div>
+            <button class="btn btn-primary" onclick="parseCSV()">Parse CSV</button>
+        </div>
+
+        <!-- Manual Entry Section -->
+        <div id="manual" class="setup-section">
+            <div class="input-group">
+                <div class="manual-entry">
+                    <input type="text" id="manualTeamId" placeholder="Team ID (e.g., A)">
+                    <input type="text" id="manualPlayer1" placeholder="Player 1 Name">
+                    <input type="text" id="manualPlayer2" placeholder="Player 2 Name (optional)">
+                    <input type="text" id="manualManager" placeholder="Manager Name">
+                    <input type="text" id="manualGroup" placeholder="Group (e.g., Group 1)">
                 </div>
+            </div>
 
-                <!-- CSV Import Section -->
-                <div id="csvImportSection" style="display: none;">
-                    <h3 style="margin-bottom: 1rem;">📁 CSV Import</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                        Format: Team ID, Player 1, Player 2 (optional), Manager, Group
-                    </p>
-                    <input type="file" id="csvFile" accept=".csv" style="margin-bottom: 1rem;">
-                    <button onclick="importCSV()" class="btn btn-primary">Upload & Import</button>
-                </div>
-
-                <!-- Manual Entry Section -->
-                <div id="manualEntrySection" style="display: none;">
-                    <h3 style="margin-bottom: 1rem;">✍️ Manual Entry</h3>
-                    
-                    <div class="form-group">
-                        <label>Quick Entry (One line per team)</label>
-                        <textarea id="quickEntryText" rows="10" placeholder="Format: TeamID, Player1, Player2, Manager, Group
-Example:
-A, John, Sarah, Mike, Group 1
-B, David, , Lisa, Group 1
-C, Emma, Tom, Alex, Group 2" style="width: 100%; padding: 1rem; background: var(--bg-dark); border: 2px solid var(--border-color); border-radius: 0.5rem; color: white; font-family: monospace;"></textarea>
-                    </div>
-                    
-                    <button onclick="processQuickEntry()" class="btn btn-primary">Add All Teams</button>
-                </div>
-
-                <!-- Preview Section -->
-                <div id="previewSection" style="display: none; margin-top: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">👀 Preview</h3>
-                    <div id="previewContent"></div>
-                    <div style="margin-top: 1.5rem;">
-                        <button onclick="generateMatches()" class="btn btn-success">🎲 Generate Matches</button>
-                        <button onclick="resetSetup()" class="btn btn-secondary" style="margin-left: 0.5rem;">🔄 Start Over</button>
-                    </div>
-                </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="addTeamManually()">➕ Add Team</button>
+                <button class="btn btn-secondary" onclick="clearManualForm()">🗑️ Clear Form</button>
             </div>
         </div>
 
-        <!-- Main Tournament View (After setup) -->
-        <div id="tournamentView" class="view-container" style="display: none;">
-            <!-- Navigation will be injected here -->
-            <nav class="main-nav" id="mainNav"></nav>
-            
-            <!-- Content containers will be injected dynamically -->
-            <div id="dynamicContent"></div>
+        <!-- Preview Section -->
+        <div id="preview" class="setup-section">
+            <div class="preview-section">
+                <h3>Teams Added:</h3>
+                <div id="teamPreview" class="team-preview">
+                    <p style="text-align:center; color:#666;">No teams added yet. Add teams using CSV import or manual entry.</p>
+                </div>
+
+                <div class="matches-summary" id="matchesSummary" style="display:none;">
+                    <h2 id="totalMatches">0</h2>
+                    <p>Matches will be generated</p>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-success" onclick="generateTournament()" id="generateBtn" disabled>
+                    🎲 Generate Tournament
+                </button>
+                <button class="btn btn-secondary" onclick="clearAllTeams()">
+                    🗑️ Clear All
+                </button>
+            </div>
         </div>
-    </div>
-
-    <!-- Fixed Position Badges -->
-    <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
-    
-    <!-- Floating Corner Buttons -->
-    <button id="adminBtn" class="floating-corner-btn admin-btn">🔐</button>
-    <button id="viewModeBtn" class="floating-corner-btn view-btn" style="display:none;">👁️</button>
-
-    <!-- Footer Trademark -->
-    <div class="footer-trademark">
-        Created with <span class="heart">❤️</span> by Santo's Claude
     </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="../firebase-config.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="sport-engine.js"></script>
 
-    <style>
-        .setup-option {
-            padding: 2rem;
-            text-align: center;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1));
-            border: 2px solid var(--border-color);
-            border-radius: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
+    <script>
+        // Get sport from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const sport = urlParams.get('game') || 'generic';
         
-        .setup-option:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary-color);
-            box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);
+        // Sport icons and names
+        const sportConfig = {
+            'carrom': { icon: '🎯', name: 'Carrom' },
+            'chess': { icon: '♟️', name: 'Chess' },
+            'snooker': { icon: '🎱', name: 'Snooker' },
+            'foosball': { icon: '⚽', name: 'Foosball' },
+            'badminton': { icon: '🏸', name: 'Badminton' },
+            'tabletennis': { icon: '🏓', name: 'Table Tennis' }
+        };
+
+        // Initialize
+        const config = sportConfig[sport] || { icon: '🎮', name: sport };
+        document.getElementById('sportIcon').textContent = config.icon;
+        document.getElementById('sportName').textContent = `${config.name} Tournament`;
+        document.getElementById('sportTitle').textContent = `FELIZZO '25 - ${config.name} Setup`;
+
+        // Initialize tournament engine
+        initializeSportTournament(sport);
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetTab = this.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.setup-section').forEach(s => s.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+                
+                if (targetTab === 'preview') {
+                    updatePreview();
+                }
+            });
+        });
+
+        // Parse CSV
+        function parseCSV() {
+            const csvText = document.getElementById('csvInput').value.trim();
+            if (!csvText) {
+                showMessage('Please enter CSV data', 'error');
+                return;
+            }
+
+            try {
+                window.tournamentEngine.parseCSV(csvText);
+                showMessage(`✅ Successfully parsed ${window.tournamentEngine.teams.length} teams!`, 'success');
+                
+                // Switch to preview tab
+                setTimeout(() => {
+                    document.querySelector('[data-tab="preview"]').click();
+                }, 1000);
+            } catch (error) {
+                showMessage('Error parsing CSV: ' + error.message, 'error');
+            }
         }
-        
-        .setup-option h3 {
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
+
+        // Add team manually
+        function addTeamManually() {
+            const teamData = {
+                id: document.getElementById('manualTeamId').value.trim(),
+                player1: document.getElementById('manualPlayer1').value.trim(),
+                player2: document.getElementById('manualPlayer2').value.trim(),
+                manager: document.getElementById('manualManager').value.trim(),
+                group: document.getElementById('manualGroup').value.trim()
+            };
+
+            if (!teamData.id || !teamData.player1 || !teamData.manager || !teamData.group) {
+                showMessage('Please fill required fields: Team ID, Player 1, Manager, Group', 'error');
+                return;
+            }
+
+            window.tournamentEngine.addTeam(teamData);
+            showMessage(`✅ Added team: ${teamData.id}`, 'success');
+            clearManualForm();
+            updatePreview();
         }
-        
-        .setup-option p {
-            color: var(--text-secondary);
+
+        // Clear manual form
+        function clearManualForm() {
+            document.getElementById('manualTeamId').value = '';
+            document.getElementById('manualPlayer1').value = '';
+            document.getElementById('manualPlayer2').value = '';
+            document.getElementById('manualManager').value = '';
+            document.getElementById('manualGroup').value = '';
         }
-    </style>
+
+        // Update preview
+        function updatePreview() {
+            const teams = window.tournamentEngine.teams;
+            const previewDiv = document.getElementById('teamPreview');
+            const generateBtn = document.getElementById('generateBtn');
+            const matchesSummary = document.getElementById('matchesSummary');
+
+            if (teams.length === 0) {
+                previewDiv.innerHTML = '<p style="text-align:center; color:#666;">No teams added yet.</p>';
+                generateBtn.disabled = true;
+                matchesSummary.style.display = 'none';
+                return;
+            }
+
+            // Show teams
+            previewDiv.innerHTML = teams.map(team => `
+                <div class="team-card">
+                    <strong>${team.id}</strong>
+                    <div>👥 ${team.player1}${team.player2 ? ' & ' + team.player2 : ''}</div>
+                    <div>👔 ${team.manager}</div>
+                    <div>📁 ${team.group}</div>
+                </div>
+            `).join('');
+
+            // Calculate matches
+            const groups = {};
+            teams.forEach(t => {
+                if (!groups[t.group]) groups[t.group] = [];
+                groups[t.group].push(t);
+            });
+
+            let totalMatches = 0;
+            Object.values(groups).forEach(groupTeams => {
+                const n = groupTeams.length;
+                totalMatches += (n * (n - 1)) / 2;
+            });
+
+            document.getElementById('totalMatches').textContent = totalMatches;
+            matchesSummary.style.display = 'block';
+            generateBtn.disabled = false;
+        }
+
+        // Generate tournament
+        async function generateTournament() {
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+
+            try {
+                // Generate matches
+                window.tournamentEngine.generateMatches();
+                
+                // Save to Firebase
+                const saved = await window.tournamentEngine.saveToFirebase();
+                
+                if (saved) {
+                    showMessage('✅ Tournament created successfully! Redirecting...', 'success');
+                    
+                    // Redirect to tournament view after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = `tournament.html?game=${sport}`;
+                    }, 2000);
+                } else {
+                    throw new Error('Failed to save to Firebase');
+                }
+            } catch (error) {
+                showMessage('❌ Error creating tournament: ' + error.message, 'error');
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🎲 Generate Tournament';
+            }
+        }
+
+        // Clear all teams
+        function clearAllTeams() {
+            if (confirm('Are you sure you want to clear all teams?')) {
+                window.tournamentEngine.teams = [];
+                window.tournamentEngine.groups = new Set();
+                document.getElementById('csvInput').value = '';
+                updatePreview();
+                showMessage('All teams cleared', 'success');
+            }
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = text;
+            messageBox.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 5000);
+        }
+    </script>
 </body>
 </html>

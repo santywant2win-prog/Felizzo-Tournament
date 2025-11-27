@@ -1,297 +1,272 @@
-// FELIZZO '25 Universal Sport Engine
-// Get sport from URL
-const urlParams = new URLSearchParams(window.location.search);
-const SPORT = urlParams.get('game') || 'unknown';
+// 🎮 FELIZZO '25 - Universal Sport Tournament Engine
+// Handles setup, match generation, and Firebase integration for all sports
 
-// Sport Configuration
-const SPORT_CONFIG = {
-    chess: { name: 'Chess', icon: '♟️', color: '#8b5cf6' },
-    snooker: { name: 'Snooker', icon: '🎱', color: '#10b981' },
-    foosball: { name: 'Foosball', icon: '⚽', color: '#f59e0b' },
-    badminton: { name: 'Badminton', icon: '🏸', color: '#ec4899' },
-    tabletennis: { name: 'Table Tennis', icon: '🏓', color: '#06b6d4' }
-};
-
-// App State
-const APP_STATE = {
-    isAdmin: false,
-    adminPassword: 'f25ca',
-    currentView: 'setup',
-    sport: SPORT,
-    setupComplete: false
-};
-
-// Tournament Data
-let tournamentData = {};
-let participantsList = [];
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    initializeSport();
-    setupEventListeners();
-    checkExistingData();
-});
-
-function initializeSport() {
-    const config = SPORT_CONFIG[SPORT];
-    if (!config) {
-        alert('Invalid sport!');
-        window.location.href = '../';
-        return;
-    }
-    
-    document.getElementById('pageTitle').textContent = `${config.name} - FELIZZO '25`;
-    document.getElementById('sportTitle').textContent = `${config.icon} ${config.name} Tournament`;
-}
-
-function setupEventListeners() {
-    document.getElementById('adminBtn').addEventListener('click', () => {
-        const password = prompt('Enter admin password:');
-        if (password === APP_STATE.adminPassword) {
-            APP_STATE.isAdmin = true;
-            alert('✅ Admin mode activated!');
-            updateAdminUI();
-        } else {
-            alert('❌ Incorrect password!');
-        }
-    });
-    
-    document.getElementById('viewModeBtn').addEventListener('click', () => {
-        APP_STATE.isAdmin = false;
-        alert('Switched to view mode');
-        updateAdminUI();
-    });
-}
-
-function updateAdminUI() {
-    const adminBtn = document.getElementById('adminBtn');
-    const viewModeBtn = document.getElementById('viewModeBtn');
-    const backupBtn = document.getElementById('backupBtn');
-    const restoreBtn = document.getElementById('restoreBtn');
-    
-    if (APP_STATE.isAdmin) {
-        adminBtn.style.display = 'none';
-        viewModeBtn.style.display = 'block';
-        backupBtn.style.display = 'inline-block';
-        restoreBtn.style.display = 'inline-block';
-    } else {
-        adminBtn.style.display = 'block';
-        viewModeBtn.style.display = 'none';
-        backupBtn.style.display = 'none';
-        restoreBtn.style.display = 'none';
-    }
-}
-
-function checkExistingData() {
-    // Check Firebase for existing tournament
-    const dbRef = firebase.database().ref(`felizzo2025/${SPORT}/tournamentData`);
-    
-    dbRef.once('value', (snapshot) => {
-        if (snapshot.exists()) {
-            tournamentData = snapshot.val();
-            APP_STATE.setupComplete = true;
-            showTournamentView();
-        }
-    });
-}
-
-// ============================================
-// SETUP FUNCTIONS
-// ============================================
-
-function showCSVImport() {
-    document.getElementById('csvImportSection').style.display = 'block';
-    document.getElementById('manualEntrySection').style.display = 'none';
-}
-
-function showManualEntry() {
-    document.getElementById('manualEntrySection').style.display = 'block';
-    document.getElementById('csvImportSection').style.display = 'none';
-}
-
-function importCSV() {
-    const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Please select a CSV file');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        parseCSV(text);
-    };
-    reader.readAsText(file);
-}
-
-function parseCSV(text) {
-    const lines = text.split('\n').filter(line => line.trim());
-    participantsList = [];
-    
-    lines.forEach((line, index) => {
-        if (index === 0 && line.toLowerCase().includes('team')) return; // Skip header
+class SportTournamentEngine {
+    constructor(sportName) {
+        this.sportName = sportName.toLowerCase();
+        this.teams = [];
+        this.matches = [];
+        this.groups = new Set();
         
-        const parts = line.split(',').map(p => p.trim());
-        if (parts.length >= 4) {
-            participantsList.push({
-                teamId: parts[0],
-                name1: parts[1],
-                name2: parts[2] || '',
-                manager: parts[3],
-                groupName: parts[4] || 'Group 1'
-            });
-        }
-    });
-    
-    if (participantsList.length > 0) {
-        showPreview();
-    } else {
-        alert('No valid data found in CSV');
-    }
-}
-
-function processQuickEntry() {
-    const text = document.getElementById('quickEntryText').value;
-    const lines = text.split('\n').filter(line => line.trim());
-    
-    participantsList = [];
-    
-    lines.forEach(line => {
-        const parts = line.split(',').map(p => p.trim());
-        if (parts.length >= 4) {
-            participantsList.push({
-                teamId: parts[0],
-                name1: parts[1],
-                name2: parts[2] || '',
-                manager: parts[3],
-                groupName: parts[4] || 'Group 1'
-            });
-        }
-    });
-    
-    if (participantsList.length > 0) {
-        showPreview();
-    } else {
-        alert('Please enter at least one team');
-    }
-}
-
-function showPreview() {
-    const previewSection = document.getElementById('previewSection');
-    const previewContent = document.getElementById('previewContent');
-    
-    // Group by groupName
-    const grouped = {};
-    participantsList.forEach(p => {
-        if (!grouped[p.groupName]) grouped[p.groupName] = [];
-        grouped[p.groupName].push(p);
-    });
-    
-    let html = '<div style="margin-bottom: 1.5rem;">';
-    html += `<p style="color: var(--text-light);"><strong>${participantsList.length} teams</strong> in <strong>${Object.keys(grouped).length} groups</strong></p>`;
-    html += '</div>';
-    
-    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">';
-    
-    Object.keys(grouped).forEach(groupName => {
-        html += `
-            <div style="padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem; border: 2px solid var(--border-color);">
-                <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">${groupName} (${grouped[groupName].length} teams)</h4>
-        `;
+        // Firebase path for this sport
+        this.firebasePath = `/felizzo2025/${this.sportName}`;
         
-        grouped[groupName].forEach(team => {
-            html += `
-                <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: var(--bg-light); border-radius: 0.25rem;">
-                    <strong style="color: var(--secondary-color);">${team.teamId}</strong> - 
-                    ${team.name1}${team.name2 ? ' & ' + team.name2 : ''}
-                </div>
-            `;
+        console.log(`🎯 Tournament Engine initialized for: ${sportName}`);
+        console.log(`📂 Firebase path: ${this.firebasePath}`);
+    }
+
+    // Parse CSV data
+    parseCSV(csvText) {
+        const lines = csvText.trim().split('\n');
+        const teams = [];
+        
+        lines.forEach((line, index) => {
+            const parts = line.split(',').map(p => p.trim());
+            if (parts.length >= 4) {
+                teams.push({
+                    id: parts[0] || `T${index + 1}`,
+                    player1: parts[1] || '',
+                    player2: parts[2] || '',
+                    manager: parts[3] || '',
+                    group: parts[4] || 'Group 1'
+                });
+                this.groups.add(parts[4] || 'Group 1');
+            }
         });
         
-        html += '</div>';
-    });
-    
-    html += '</div>';
-    
-    previewContent.innerHTML = html;
-    previewSection.style.display = 'block';
-}
+        this.teams = teams;
+        console.log(`✅ Parsed ${teams.length} teams across ${this.groups.size} groups`);
+        return teams;
+    }
 
-function generateMatches() {
-    if (!confirm('Generate round-robin matches for all groups?')) return;
-    
-    // Group participants
-    const grouped = {};
-    participantsList.forEach(p => {
-        if (!grouped[p.groupName]) grouped[p.groupName] = [];
-        grouped[p.groupName].push(p);
-    });
-    
-    // Generate matches for each group
-    tournamentData = {};
-    
-    Object.keys(grouped).forEach(groupName => {
-        const teams = grouped[groupName];
-        const matches = [];
-        let matchNo = 1;
+    // Add single team manually
+    addTeam(teamData) {
+        this.teams.push(teamData);
+        this.groups.add(teamData.group);
+        console.log(`✅ Added team: ${teamData.id}`);
+    }
+
+    // Generate round-robin matches for all groups
+    generateMatches() {
+        this.matches = [];
+        let matchNumber = 1;
         
-        // Round-robin: each team plays every other team once
-        for (let i = 0; i < teams.length; i++) {
-            for (let j = i + 1; j < teams.length; j++) {
+        // Get unique groups
+        const groupList = Array.from(this.groups).sort();
+        
+        groupList.forEach(group => {
+            const groupTeams = this.teams.filter(t => t.group === group);
+            const groupMatches = this.generateRoundRobin(groupTeams, group, matchNumber);
+            
+            this.matches.push(...groupMatches);
+            matchNumber += groupMatches.length;
+            
+            console.log(`✅ Generated ${groupMatches.length} matches for ${group}`);
+        });
+        
+        console.log(`🎯 Total matches generated: ${this.matches.length}`);
+        return this.matches;
+    }
+
+    // Round-robin algorithm for a single group
+    generateRoundRobin(teams, groupName, startNumber) {
+        const matches = [];
+        const n = teams.length;
+        
+        // Each team plays each other team once
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
                 matches.push({
-                    matchNo: matchNo++,
-                    opponent1: teams[i].teamId,
-                    opponent2: teams[j].teamId,
-                    date: '',
-                    winner: '',
-                    runner: '',
-                    draw: ''
+                    matchNumber: startNumber + matches.length,
+                    group: groupName,
+                    teamA: teams[i].id,
+                    teamB: teams[j].id,
+                    teamAName: `${teams[i].player1}${teams[i].player2 ? ' & ' + teams[i].player2 : ''}`,
+                    teamBName: `${teams[j].player1}${teams[j].player2 ? ' & ' + teams[j].player2 : ''}`,
+                    date: null,
+                    winner: null,
+                    runner: null,
+                    isDraw: false,
+                    status: 'pending'
                 });
             }
         }
         
-        tournamentData[groupName] = {
-            teamName: groupName,
-            participants: teams,
-            matches: matches
-        };
-    });
-    
-    // Save to Firebase
-    const dbRef = firebase.database().ref(`felizzo2025/${SPORT}/tournamentData`);
-    dbRef.set(tournamentData, (error) => {
-        if (error) {
-            alert('❌ Failed to save tournament data');
-        } else {
-            alert(`✅ Generated ${Object.keys(tournamentData).reduce((sum, g) => sum + tournamentData[g].matches.length, 0)} matches!`);
-            APP_STATE.setupComplete = true;
-            showTournamentView();
+        return matches;
+    }
+
+    // Calculate points and standings
+    calculateStandings() {
+        const standings = {};
+        
+        // Initialize standings for all teams
+        this.teams.forEach(team => {
+            standings[team.id] = {
+                team: team.id,
+                player1: team.player1,
+                player2: team.player2,
+                manager: team.manager,
+                group: team.group,
+                played: 0,
+                won: 0,
+                lost: 0,
+                draw: 0,
+                points: 0,
+                qualified: false
+            };
+        });
+        
+        // Calculate from matches
+        this.matches.forEach(match => {
+            if (match.winner || match.isDraw) {
+                const teamAStats = standings[match.teamA];
+                const teamBStats = standings[match.teamB];
+                
+                teamAStats.played++;
+                teamBStats.played++;
+                
+                if (match.isDraw) {
+                    teamAStats.draw++;
+                    teamBStats.draw++;
+                    teamAStats.points += 1;
+                    teamBStats.points += 1;
+                } else if (match.winner === match.teamA) {
+                    teamAStats.won++;
+                    teamBStats.lost++;
+                    teamAStats.points += 3;
+                } else {
+                    teamBStats.won++;
+                    teamAStats.lost++;
+                    teamBStats.points += 3;
+                }
+            }
+        });
+        
+        // Determine qualification (top 2 from each group)
+        const groupList = Array.from(this.groups);
+        groupList.forEach(group => {
+            const groupStandings = Object.values(standings)
+                .filter(s => s.group === group)
+                .sort((a, b) => b.points - a.points || b.won - a.won);
+            
+            // Top 2 qualify
+            if (groupStandings.length >= 2) {
+                groupStandings[0].qualified = true;
+                groupStandings[1].qualified = true;
+            }
+        });
+        
+        return standings;
+    }
+
+    // Save tournament data to Firebase
+    async saveToFirebase() {
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase not initialized');
+            return false;
         }
-    });
+
+        try {
+            const db = firebase.database();
+            const tournamentRef = db.ref(`${this.firebasePath}/tournamentData`);
+            
+            // Prepare data
+            const tournamentData = {
+                sport: this.sportName,
+                teams: this.teams,
+                matches: this.matches,
+                groups: Array.from(this.groups),
+                createdAt: new Date().toISOString(),
+                lastUpdated: new Date().toISOString()
+            };
+            
+            await tournamentRef.set(tournamentData);
+            console.log(`✅ Tournament data saved to Firebase: ${this.firebasePath}/tournamentData`);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Firebase save error:', error);
+            return false;
+        }
+    }
+
+    // Load tournament data from Firebase
+    async loadFromFirebase() {
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase not initialized');
+            return false;
+        }
+
+        try {
+            const db = firebase.database();
+            const tournamentRef = db.ref(`${this.firebasePath}/tournamentData`);
+            
+            const snapshot = await tournamentRef.once('value');
+            const data = snapshot.val();
+            
+            if (data) {
+                this.teams = data.teams || [];
+                this.matches = data.matches || [];
+                this.groups = new Set(data.groups || []);
+                
+                console.log(`✅ Loaded ${this.teams.length} teams and ${this.matches.length} matches from Firebase`);
+                return true;
+            } else {
+                console.log('⚠️ No existing tournament data found');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('❌ Firebase load error:', error);
+            return false;
+        }
+    }
+
+    // Update match result
+    async updateMatchResult(matchNumber, winner, runner, isDraw = false) {
+        const match = this.matches.find(m => m.matchNumber === matchNumber);
+        if (!match) {
+            console.error(`❌ Match ${matchNumber} not found`);
+            return false;
+        }
+
+        match.winner = winner;
+        match.runner = runner;
+        match.isDraw = isDraw;
+        match.status = 'completed';
+        match.lastUpdated = new Date().toISOString();
+
+        // Save to Firebase
+        return await this.saveToFirebase();
+    }
+
+    // Export data for display
+    exportForDisplay() {
+        const standings = this.calculateStandings();
+        
+        return {
+            sport: this.sportName,
+            teams: this.teams,
+            matches: this.matches,
+            standings: Object.values(standings),
+            groups: Array.from(this.groups),
+            summary: {
+                totalTeams: this.teams.length,
+                totalMatches: this.matches.length,
+                completedMatches: this.matches.filter(m => m.status === 'completed').length,
+                pendingMatches: this.matches.filter(m => m.status === 'pending').length
+            }
+        };
+    }
 }
 
-function resetSetup() {
-    if (!confirm('Clear all entered data and start over?')) return;
-    
-    participantsList = [];
-    document.getElementById('quickEntryText').value = '';
-    document.getElementById('csvFile').value = '';
-    document.getElementById('previewSection').style.display = 'none';
-    document.getElementById('csvImportSection').style.display = 'none';
-    document.getElementById('manualEntrySection').style.display = 'none';
+// Global function to initialize tournament
+function initializeSportTournament(sportName) {
+    window.tournamentEngine = new SportTournamentEngine(sportName);
+    console.log(`🚀 ${sportName} tournament engine ready!`);
 }
 
-// ============================================
-// TOURNAMENT VIEW (Reuse Carrom UI)
-// ============================================
-
-function showTournamentView() {
-    document.getElementById('setupView').style.display = 'none';
-    document.getElementById('tournamentView').style.display = 'block';
-    
-    alert('Tournament view coming soon! Will reuse Carrom UI.');
-    // TODO: Load carrom app.js and render with tournamentData
+// Export for use
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SportTournamentEngine;
 }
-

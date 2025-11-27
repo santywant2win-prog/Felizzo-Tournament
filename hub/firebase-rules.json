@@ -1,0 +1,33 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": false,
+    
+    "felizzo2025": {
+      "$sport": {
+        ".read": true,
+        "tournamentData": {
+          ".write": "auth != null || root.child('adminPassword').val() == 'f25ca'"
+        },
+        "knockoutData": {
+          ".write": "auth != null || root.child('adminPassword').val() == 'f25ca'"
+        }
+      }
+    },
+    
+    "tournamentData": {
+      ".read": true,
+      ".write": "auth != null || root.child('adminPassword').val() == 'f25ca'"
+    },
+    
+    "knockoutData": {
+      ".read": true,
+      ".write": "auth != null || root.child('adminPassword').val() == 'f25ca'"
+    },
+    
+    "adminPassword": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
