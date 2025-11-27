@@ -1,0 +1,35 @@
+{
+  "name": "FELIZZO '25 Table Tennis",
+  "short_name": "F25 Table Tennis",
+  "description": "FELIZZO '25 Table Tennis Tournament Management App",
+  "start_url": "/tabletennis/",
+  "display": "standalone",
+  "background_color": "#ef4444",
+  "theme_color": "#ef4444",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%23ef4444'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='280' fill='white'%3E\ud83c\udfd3%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Schedule",
+      "url": "/tabletennis/#schedule",
+      "description": "View tournament schedule"
+    },
+    {
+      "name": "Standings",
+      "url": "/tabletennis/#standings",
+      "description": "View team standings"
+    },
+    {
+      "name": "Admin Login",
+      "url": "/tabletennis/#admin",
+      "description": "Admin access"
+    }
+  ]
+}
