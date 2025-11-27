@@ -1514,6 +1514,47 @@ function renderHomeMatches() {
     
     console.log('Matches after filter:', allMatches.length);
     
+    // Calculate summary statistics
+    const summary = {
+        total: allMatches.length,
+        completed: 0,
+        pending: 0,
+        draw: 0
+    };
+    
+    allMatches.forEach(match => {
+        if (match.winner && match.runner) {
+            if (match.winner === match.runner) {
+                summary.draw++;
+            } else {
+                summary.completed++;
+            }
+        } else {
+            summary.pending++;
+        }
+    });
+    
+    const completionPercentage = summary.total > 0 
+        ? Math.round(((summary.completed + summary.draw) / summary.total) * 100) 
+        : 0;
+    
+    // Update summary display
+    const filterSummary = document.getElementById('filterSummary');
+    const hasActiveFilters = groupFilter || statusFilter || dateFilter || searchText;
+    
+    if (filterSummary) {
+        if (hasActiveFilters) {
+            filterSummary.style.display = 'block';
+            document.getElementById('summaryTotal').textContent = summary.total;
+            document.getElementById('summaryCompleted').textContent = summary.completed;
+            document.getElementById('summaryPending').textContent = summary.pending;
+            document.getElementById('summaryDraw').textContent = summary.draw;
+            document.getElementById('summaryPercentage').textContent = `${completionPercentage}%`;
+        } else {
+            filterSummary.style.display = 'none';
+        }
+    }
+    
     // Sort by date
     allMatches.sort((a, b) => {
         if (!a.date) return 1;

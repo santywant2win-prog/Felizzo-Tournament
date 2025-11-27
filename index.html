@@ -154,6 +154,33 @@
                     </div>
                 </div>
                 
+                <!-- Filter Summary -->
+                <div id="filterSummary" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 0.75rem; border: 2px solid var(--primary-color);">
+                    <h4 style="color: var(--primary-color); margin-bottom: 1rem; font-size: 1rem;">📊 Filtered Results Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; text-align: center;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);" id="summaryTotal">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Total</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #10b981;" id="summaryCompleted">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Completed</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;" id="summaryPending">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Pending</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #6366f1;" id="summaryDraw">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Draws</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-color);" id="summaryPercentage">0%</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Complete</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="table-container">
                     <table class="standings-table" id="scheduleTable">
                         <thead>
