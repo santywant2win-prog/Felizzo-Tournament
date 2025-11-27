@@ -300,6 +300,8 @@ function updateAdminIndicator() {
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
     const populateDatesBtn = document.getElementById('populateDatesBtn');
+    const addTeamBtn = document.getElementById('addTeamBtn');
+    const addTeamBtnParticipants = document.getElementById('addTeamBtnParticipants');
     const adminBtn = document.getElementById('adminBtn');
     const viewModeBtn = document.getElementById('viewModeBtn');
     const quickMatchJump = document.getElementById('quickMatchJump');
@@ -312,6 +314,8 @@ function updateAdminIndicator() {
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
         populateDatesBtn.style.display = 'inline-block';
+        addTeamBtn.style.display = 'inline-block';
+        if (addTeamBtnParticipants) addTeamBtnParticipants.style.display = 'inline-block';
         adminBtn.style.display = 'none';
         viewModeBtn.style.display = 'block';
         if (quickMatchJump) quickMatchJump.style.display = 'block';
@@ -322,6 +326,8 @@ function updateAdminIndicator() {
         backupBtn.style.display = 'none';
         restoreBtn.style.display = 'none';
         populateDatesBtn.style.display = 'none';
+        addTeamBtn.style.display = 'none';
+        if (addTeamBtnParticipants) addTeamBtnParticipants.style.display = 'none';
         adminBtn.style.display = 'block';
         viewModeBtn.style.display = 'none';
         if (quickMatchJump) quickMatchJump.style.display = 'none';
@@ -2646,4 +2652,232 @@ function renderFinalMatch(final, champion) {
         </div>
     `;
 }
+
+
+// ============================================
+// ADD TEAM FUNCTIONALITY
+// ============================================
+
+function initializeAddTeamButtons() {
+    const addTeamBtn = document.getElementById('addTeamBtn');
+    const addTeamBtnParticipants = document.getElementById('addTeamBtnParticipants');
+    
+    if (addTeamBtn) {
+        addTeamBtn.addEventListener('click', showAddTeamDialog);
+    }
+    
+    if (addTeamBtnParticipants) {
+        addTeamBtnParticipants.addEventListener('click', showAddTeamDialog);
+    }
+}
+
+function showAddTeamDialog() {
+    const groupName = prompt('Enter Group Name:\n(Examples: 1 P, Discovery, Core Experience, etc.)');
+    
+    if (!groupName || !groupName.trim()) {
+        return;
+    }
+    
+    // Check if group exists
+    if (!tournamentData[groupName]) {
+        const create = confirm(`Group "${groupName}" doesn't exist. Create new group?`);
+        if (!create) return;
+        
+        tournamentData[groupName] = {
+            teamName: groupName,
+            participants: [],
+            matches: []
+        };
+    }
+    
+    // Get team details
+    const teamId = prompt('Enter Team ID:\n(Example: E, F, AA, etc.)');
+    if (!teamId || !teamId.trim()) {
+        alert('Team ID is required!');
+        return;
+    }
+    
+    // Check if team ID already exists in this group
+    const group = tournamentData[groupName];
+    if (group.participants.find(p => p.teamId === teamId.trim())) {
+        alert(`Team ID "${teamId}" already exists in ${groupName}!`);
+        return;
+    }
+    
+    const name1 = prompt('Enter Player 1 Name:');
+    if (!name1 || !name1.trim()) {
+        alert('Player 1 name is required!');
+        return;
+    }
+    
+    const name2 = prompt('Enter Player 2 Name (or leave empty for solo):') || '';
+    
+    const manager = prompt('Enter Manager Name:');
+    if (!manager || !manager.trim()) {
+        alert('Manager name is required!');
+        return;
+    }
+    
+    // Check if players exist in other teams (warn but allow)
+    checkPlayerDuplicates(name1, name2, teamId, groupName);
+    
+    // Add team to group
+    addNewTeamToGroup(groupName, {
+        teamId: teamId.trim(),
+        name1: name1.trim(),
+        name2: name2.trim(),
+        manager: manager.trim()
+    });
+}
+
+function checkPlayerDuplicates(name1, name2, newTeamId, newGroupName) {
+    const duplicates = [];
+    
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        group.participants.forEach(participant => {
+            if (participant.teamId === newTeamId && groupName === newGroupName) return;
+            
+            if (participant.name1.toLowerCase() === name1.toLowerCase() ||
+                (name2 && participant.name1.toLowerCase() === name2.toLowerCase()) ||
+                (name2 && participant.name2 && participant.name2.toLowerCase() === name1.toLowerCase()) ||
+                (name2 && participant.name2 && participant.name2.toLowerCase() === name2.toLowerCase())) {
+                duplicates.push(`${participant.teamId} (${groupName})`);
+            }
+        });
+    });
+    
+    if (duplicates.length > 0) {
+        const proceed = confirm(`⚠️ WARNING: Player(s) found in other teams:\n${duplicates.join(', ')}\n\nContinue anyway?`);
+        if (!proceed) {
+            throw new Error('User cancelled due to duplicates');
+        }
+    }
+}
+
+function addNewTeamToGroup(groupName, newTeam) {
+    const group = tournamentData[groupName];
+    
+    // Add team to participants
+    group.participants.push(newTeam);
+    
+    // Get current highest match number globally
+    let maxMatchNo = 0;
+    Object.keys(tournamentData).forEach(gName => {
+        const g = tournamentData[gName];
+        g.matches.forEach(match => {
+            if (match.matchNo > maxMatchNo) {
+                maxMatchNo = match.matchNo;
+            }
+        });
+    });
+    
+    // Generate matches: new team vs all existing teams in group
+    const newMatches = [];
+    let nextMatchNo = maxMatchNo + 1;
+    
+    group.participants.forEach(participant => {
+        if (participant.teamId === newTeam.teamId) return; // Skip self
+        
+        newMatches.push({
+            matchNo: nextMatchNo++,
+            opponent1: newTeam.teamId,
+            opponent2: participant.teamId,
+            date: '',
+            winner: '',
+            runner: '',
+            draw: ''
+        });
+    });
+    
+    // Add new matches to group
+    group.matches.push(...newMatches);
+    
+    // Assign dates to new matches (distribute across Nov 24 - Dec 10)
+    assignDatesToNewMatches(newMatches);
+    
+    // Save to Firebase
+    updateSyncStatus('saving', '💾 Adding team...');
+    
+    saveToFirebase((success) => {
+        if (success) {
+            updateSyncStatus('synced', '✅ Team added!');
+            alert(`✅ Success!\n\n• Added team ${newTeam.teamId} to ${groupName}\n• Generated ${newMatches.length} new matches\n• Match numbers: ${newMatches[0].matchNo} - ${newMatches[newMatches.length - 1].matchNo}\n• Total matches now: ${getTotalMatches()}`);
+            renderAllViews();
+            setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+        } else {
+            updateSyncStatus('error', '❌ Failed to add team');
+            alert('❌ Failed to save. Please try again.');
+        }
+    });
+}
+
+function assignDatesToNewMatches(newMatches) {
+    // Date range: Nov 24 - Dec 10, 2025
+    const startDate = new Date('2025-11-24');
+    const endDate = new Date('2025-12-10');
+    
+    // Build available dates list (same as populateMatchDates logic)
+    const availableDates = [];
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay();
+        const matchesForDay = (dayOfWeek === 5) ? 20 : 15; // Friday: 20, Others: 15
+        
+        for (let i = 0; i < matchesForDay; i++) {
+            availableDates.push(currentDate.toISOString().split('T')[0]);
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Count existing matches per date
+    const dateUsage = {};
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        group.matches.forEach(match => {
+            if (match.date) {
+                dateUsage[match.date] = (dateUsage[match.date] || 0) + 1;
+            }
+        });
+    });
+    
+    // Find dates with capacity
+    const datesWithCapacity = [];
+    availableDates.forEach(date => {
+        const used = dateUsage[date] || 0;
+        const dayOfWeek = new Date(date).getDay();
+        const capacity = (dayOfWeek === 5) ? 20 : 15;
+        
+        if (used < capacity) {
+            datesWithCapacity.push(date);
+        }
+    });
+    
+    // Distribute new matches across available dates
+    newMatches.forEach((match, index) => {
+        if (datesWithCapacity.length > 0) {
+            // Use round-robin distribution
+            const dateIndex = index % datesWithCapacity.length;
+            match.date = datesWithCapacity[dateIndex];
+        } else {
+            // Fallback: add to first date (over capacity if needed)
+            match.date = availableDates[0];
+        }
+    });
+}
+
+function getTotalMatches() {
+    let total = 0;
+    Object.keys(tournamentData).forEach(groupName => {
+        total += tournamentData[groupName].matches.length;
+    });
+    return total;
+}
+
+// Initialize add team buttons when app loads
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initializeAddTeamButtons, 1000);
+});
 

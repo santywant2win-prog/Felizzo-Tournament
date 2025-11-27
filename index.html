@@ -27,6 +27,7 @@
                 <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
                 <input type="file" id="restoreFile" accept=".json" style="display:none;">
                 <button id="populateDatesBtn" class="btn btn-secondary" style="display:none;">🔄 Populate Dates</button>
+                <button id="addTeamBtn" class="btn btn-primary" style="display:none;">➕ Add Team</button>
                 <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
             </div>
         </header>
@@ -212,10 +213,17 @@
         <!-- Participants View -->
         <div id="participantsView" class="view-container">
             <div class="card">
-                <h2>👥 All Participants</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                    Complete list of all teams and players in the tournament
-                </p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                        <h2>👥 All Participants</h2>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            Complete list of all teams and players in the tournament
+                        </p>
+                    </div>
+                    <button id="addTeamBtnParticipants" class="btn btn-primary" style="display: none;">
+                        ➕ Add New Team
+                    </button>
+                </div>
                 
                 <!-- Search -->
                 <div class="form-group" style="margin-bottom: 1.5rem;">
