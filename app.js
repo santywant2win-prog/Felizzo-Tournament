@@ -1441,7 +1441,7 @@ function renderHomeMatches() {
     
     console.log('Date filter value:', dateFilter);
     
-    // Collect all matches with ORIGINAL serial numbers (1-222)
+    // Collect all matches with ORIGINAL serial numbers (dynamic based on total)
     const allMatches = [];
     let serialNo = 1;
     
@@ -1454,7 +1454,7 @@ function renderHomeMatches() {
             const team2 = group.participants.find(p => p.teamId === match.opponent2);
             
             const matchData = {
-                originalSerialNo: serialNo, // KEEP ORIGINAL NUMBER (1-222)
+                originalSerialNo: serialNo, // KEEP ORIGINAL NUMBER (dynamic)
                 groupName: groupName,
                 matchNo: match.matchNo,
                 team1Id: match.opponent1,
@@ -1582,8 +1582,10 @@ function renderHomeMatches() {
 function jumpToMatch() {
     const matchNumber = parseInt(document.getElementById('quickMatchNumber').value);
     
-    if (!matchNumber || matchNumber < 1 || matchNumber > 222) {
-        alert('Please enter a valid match number (1-222)');
+    const totalMatches = getTotalMatches();
+    
+    if (!matchNumber || matchNumber < 1 || matchNumber > totalMatches) {
+        alert(`Please enter a valid match number (1-${totalMatches})`);
         return;
     }
     
@@ -1726,7 +1728,8 @@ function saveQuickMatch(groupName, groupMatchNo, globalMatchNo, stayOnMatch = fa
                 if (!stayOnMatch) {
                     // Move to next match (global number)
                     const nextGlobalNo = globalMatchNo + 1;
-                    if (nextGlobalNo <= 222) {
+                    const totalMatches = getTotalMatches();
+                    if (nextGlobalNo <= totalMatches) {
                         document.getElementById('quickMatchNumber').value = nextGlobalNo;
                         jumpToMatch();
                     } else {
