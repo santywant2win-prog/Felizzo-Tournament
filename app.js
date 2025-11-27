@@ -776,8 +776,13 @@ function renderMatchForm(teamName, match) {
             </div>
             
             <div class="form-group">
-                <label>Date</label>
-                <input type="date" name="date" value="${match.date || ''}">
+                <label>📅 Match Date (can update independently)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="date" name="date" value="${match.date || ''}" style="flex: 1;">
+                    <button type="button" class="btn btn-primary save-date-btn" style="padding: 0.5rem 1rem;">
+                        💾 Save Date
+                    </button>
+                </div>
             </div>
             
             <div class="form-group">
@@ -832,6 +837,12 @@ function attachMatchFormListeners(teamName) {
             e.preventDefault();
             handleMatchSave(form);
         });
+        
+        // Save Date button (independent)
+        const saveDateBtn = form.querySelector('.save-date-btn');
+        if (saveDateBtn) {
+            saveDateBtn.addEventListener('click', () => handleDateOnlySave(form));
+        }
         
         // Draw button
         const drawBtn = form.querySelector('.mark-draw-btn');
@@ -2945,4 +2956,47 @@ renderHomeMatches = function() {
     originalRenderHomeMatches();
     updateTotalMatchCount();
 };
+
+
+// ============================================
+// DATE-ONLY SAVE (For Rescheduling)
+// ============================================
+
+function handleDateOnlySave(form) {
+    const teamName = form.dataset.team;
+    const matchNo = parseInt(form.dataset.match);
+    const messageElement = form.querySelector('.message-area');
+    
+    const newDate = form.querySelector('[name="date"]').value;
+    
+    if (!newDate) {
+        showMessage(messageElement, 'error', '⚠️ Please select a date');
+        return;
+    }
+    
+    // Update only the date, leave results unchanged
+    const match = tournamentData[teamName].matches.find(m => m.matchNo === matchNo);
+    if (match) {
+        const oldDate = match.date || 'Not set';
+        match.date = newDate;
+        
+        updateSyncStatus('saving', '💾 Saving date...');
+        
+        // Save to Firebase
+        saveToFirebase((success) => {
+            if (success) {
+                updateSyncStatus('synced', '✅ Date saved!');
+                showMessage(messageElement, 'success', `✓ Date updated: ${oldDate} → ${newDate}`);
+                
+                // Refresh all views to show updated date
+                renderAllViews();
+                
+                setTimeout(() => updateSyncStatus('synced', '✅ Synced'), 2000);
+            } else {
+                updateSyncStatus('error', '❌ Save failed');
+                showMessage(messageElement, 'error', '❌ Failed to save date. Try again.');
+            }
+        });
+    }
+}
 
