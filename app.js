@@ -127,6 +127,104 @@ function saveToFirebase(callback) {
         });
 }
 
+// Sync all existing completed matches to parent dashboard
+function syncAllMatchesToParent() {
+    let syncCount = 0;
+    let totalMatches = 0;
+    
+    console.log('🔄 Starting historical sync to parent dashboard...');
+    
+    // Loop through all groups
+    Object.keys(tournamentData).forEach(groupName => {
+        const group = tournamentData[groupName];
+        
+        if (group.matches) {
+            group.matches.forEach(match => {
+                // Only sync completed matches
+                if (match.winner && match.runner) {
+                    totalMatches++;
+                    
+                    // Small delay between requests to avoid overwhelming server
+                    setTimeout(() => {
+                        sendToParentDashboard(groupName, match);
+                        syncCount++;
+                        
+                        if (syncCount === totalMatches) {
+                            console.log(`✅ Historical sync complete: ${syncCount} matches sent`);
+                            alert(`✅ Synced ${syncCount} existing matches to parent dashboard!`);
+                        }
+                    }, syncCount * 100); // 100ms delay between each request
+                }
+            });
+        }
+    });
+    
+    if (totalMatches === 0) {
+        alert('ℹ️ No completed matches found to sync.');
+    } else {
+        alert(`🔄 Syncing ${totalMatches} completed matches to parent dashboard...`);
+    }
+}
+
+// ==================== PARENT DASHBOARD INTEGRATION ====================
+// Syncs match results to parent dashboard at felizzo25-dashboard.onrender.com
+function sendToParentDashboard(groupName, match) {
+    // Skip if match has no result yet
+    if (!match.winner || !match.runner) {
+        return;
+    }
+    
+    // Build match_id in format: GroupName_M1
+    const cleanGroupName = groupName.replace(/\s+/g, '_');
+    const match_id = `${cleanGroupName}_M${match.matchNo}`;
+    
+    // Determine winner value (1, 2, or 0 for draw)
+    let winner;
+    if (match.winner === match.runner) {
+        // Draw case
+        winner = 0;
+    } else if (match.winner === match.opponent1) {
+        // opponent1 won
+        winner = 1;
+    } else if (match.winner === match.opponent2) {
+        // opponent2 won
+        winner = 2;
+    } else {
+        // Invalid state - don't send
+        console.warn('Invalid match state:', match);
+        return;
+    }
+    
+    // Prepare payload
+    const payload = {
+        match_id: match_id,
+        winner: winner
+    };
+    
+    // Send to parent dashboard API
+    fetch('https://felizzo25-dashboard.onrender.com/api/carrom/submit-score', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Synced to parent dashboard:', payload, data);
+    })
+    .catch(error => {
+        console.error('⚠️ Parent dashboard sync failed (local save still succeeded):', error);
+        // NOTE: We don't block the local save if parent API fails
+        // This ensures Carrom app keeps working even if parent is down
+    });
+}
+
 function monitorConnectionStatus() {
     const connectedRef = database.ref('.info/connected');
     connectedRef.on('value', (snapshot) => {
@@ -198,6 +296,13 @@ function setupEventListeners() {
     
     // Restore file input
     document.getElementById('restoreFile').addEventListener('change', handleRestore);
+    
+    // Sync to parent dashboard button
+    document.getElementById('syncParentBtn').addEventListener('click', () => {
+        if (confirm('This will sync all completed Carrom matches to the parent dashboard. Continue?')) {
+            syncAllMatchesToParent();
+        }
+    });
     
     // Populate dates button
     document.getElementById('populateDatesBtn').addEventListener('click', handlePopulateDates);
@@ -305,6 +410,7 @@ function updateAdminIndicator() {
     const adminBtn = document.getElementById('adminBtn');
     const viewModeBtn = document.getElementById('viewModeBtn');
     const quickMatchJump = document.getElementById('quickMatchJump');
+    const syncParentBtn = document.getElementById('syncParentBtn');
     
     if (APP_STATE.isAdmin) {
         indicator.textContent = '🔓 SU';
@@ -313,6 +419,7 @@ function updateAdminIndicator() {
         resetAllBtn.style.display = 'inline-block';
         backupBtn.style.display = 'inline-block';
         restoreBtn.style.display = 'inline-block';
+        syncParentBtn.style.display = 'inline-block';
         populateDatesBtn.style.display = 'inline-block';
         addTeamBtn.style.display = 'inline-block';
         if (addTeamBtnParticipants) addTeamBtnParticipants.style.display = 'inline-block';
@@ -325,6 +432,7 @@ function updateAdminIndicator() {
         resetAllBtn.style.display = 'none';
         backupBtn.style.display = 'none';
         restoreBtn.style.display = 'none';
+        syncParentBtn.style.display = 'none';
         populateDatesBtn.style.display = 'none';
         addTeamBtn.style.display = 'none';
         if (addTeamBtnParticipants) addTeamBtnParticipants.style.display = 'none';
@@ -890,6 +998,9 @@ function handleMatchSave(form) {
         saveToFirebase((success) => {
             if (success) {
                 showMessage(messageElement, 'success', '✓ Match saved successfully!');
+                
+                // Sync to parent dashboard (non-blocking)
+                sendToParentDashboard(teamName, match);
             } else {
                 showMessage(messageElement, 'error', '❌ Failed to save to server. Try again.');
             }
@@ -914,6 +1025,9 @@ function handleMarkDraw(form) {
         saveToFirebase((success) => {
             if (success) {
                 showMessage(messageElement, 'success', '✓ Match marked as draw!');
+                
+                // Sync to parent dashboard (non-blocking)
+                sendToParentDashboard(teamName, match);
             } else {
                 showMessage(messageElement, 'error', '❌ Failed to save to server. Try again.');
             }
