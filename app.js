@@ -572,73 +572,104 @@ function calculateStandings(teamName) {
         return a.played - b.played;
     });
     
-    // Apply tie-breaker results to adjust rankings
-    // Check if there are any resolved tie-breakers for this group
-    const tieBreakKeys = Object.keys(tieBreakersData.resolved || {}).filter(k => k.startsWith(teamName + '_'));
+    // Check if this group has wild card (3rd place qualifies)
+    const hasWildCard = (teamName !== '1 P' && teamName !== 'SE');
     
-    if (tieBreakKeys.length > 0) {
-        // Re-sort considering tie-breaker winners
-        standingsArray.sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            
-            // If same points, check if there's a tie-breaker winner
-            const tieKey = `${teamName}_${a.points}`;
-            const tieWinner = tieBreakersData.resolved[tieKey];
-            
-            if (tieWinner) {
-                if (a.teamId === tieWinner) return -1;
-                if (b.teamId === tieWinner) return 1;
-            }
-            
-            // Fall back to normal tie-breakers
-            if (b.won !== a.won) return b.won - a.won;
-            return a.played - b.played;
-        });
-    }
-    
-    // Mark qualification status with tie-breaker detection
+    // Determine qualification and tie-breaker status
     standingsArray.forEach((team, index) => {
         team.rank = index + 1;
         team.qualified = false;
         team.needsTieBreaker = false;
         
         if (!allMatchesComplete) {
-            return;
-        }
-        
-        // Find teams with same points
-        const samePointsTeams = standingsArray.filter(t => t.points === team.points);
-        
-        // Check if this team is involved in a tie at qualifying positions
-        if (samePointsTeams.length > 1) {
-            const tieKey = `${teamName}_${team.points}`;
-            const tieWinner = tieBreakersData.resolved[tieKey];
-            
-            // Check if any team in the tie is at a qualifying position
-            const tieRanks = samePointsTeams.map(t => standingsArray.findIndex(s => s.teamId === t.teamId) + 1);
-            const hasQualifyingPosition = tieRanks.some(r => r <= 2) || 
-                                          (tieRanks.some(r => r === 3) && teamName !== '1 P' && teamName !== 'SE');
-            
-            if (hasQualifyingPosition) {
-                if (tieWinner) {
-                    // Tie resolved - winner gets qualified, others don't
-                    if (team.teamId === tieWinner && index < 3) {
-                        team.qualified = (index < 2) || (index === 2 && teamName !== '1 P' && teamName !== 'SE');
-                    }
-                } else {
-                    // Tie not resolved - mark as needs tie-breaker
-                    if (index < 3) {
-                        team.needsTieBreaker = true;
-                    }
-                }
-            }
-        } else {
-            // No tie - normal qualification
-            if (index < 2) {
-                team.qualified = true;
-            }
+            return; // No qualification until all matches done
         }
     });
+    
+    if (!allMatchesComplete || standingsArray.length < 2) {
+        return standingsArray;
+    }
+    
+    // Get points at each position
+    const pos1Points = standingsArray[0]?.points;
+    const pos2Points = standingsArray[1]?.points;
+    const pos3Points = standingsArray[2]?.points;
+    const pos4Points = standingsArray[3]?.points;
+    
+    // LOGIC: 
+    // - Position 1 & 2: BOTH qualify (guaranteed) - even if same points
+    // - Position 2 & 3 tie: Need tie-breaker ONLY if it affects who gets 2nd spot
+    // - Position 3 & 4 tie: Need tie-breaker for wild card spot (if group has wild card)
+    
+    // Check if there's a resolved tie-breaker for this group
+    const getTieBreakWinner = (position, points) => {
+        // Try different key formats
+        const keys = [
+            `${teamName}_pos${position}_${points}`,
+            `${teamName}_pos234_${points}`
+        ];
+        for (const key of keys) {
+            if (tieBreakersData.resolved && tieBreakersData.resolved[key]) {
+                return tieBreakersData.resolved[key];
+            }
+        }
+        return null;
+    };
+    
+    // Position 1: Always qualified if clear, or if tie-breaker resolved
+    if (pos1Points > pos2Points) {
+        // Clear #1
+        standingsArray[0].qualified = true;
+    } else if (pos1Points === pos2Points) {
+        // Tie at top - but BOTH qualify anyway, no tie-breaker needed for guaranteed spots
+        standingsArray[0].qualified = true;
+        standingsArray[1].qualified = true;
+    }
+    
+    // Position 2: Qualified unless tied with position 3 (and not already qualified from above)
+    if (!standingsArray[1].qualified) {
+        if (pos2Points > pos3Points) {
+            // Clear #2
+            standingsArray[1].qualified = true;
+        } else if (pos2Points === pos3Points) {
+            // Tie between pos 2 and 3 - THIS matters! Fight for 2nd guaranteed spot
+            const tieWinner = getTieBreakWinner(2, pos2Points);
+            if (tieWinner) {
+                // Tie resolved - winner gets qualified
+                if (standingsArray[1].teamId === tieWinner) {
+                    standingsArray[1].qualified = true;
+                } else if (standingsArray[2].teamId === tieWinner) {
+                    standingsArray[2].qualified = true;
+                    // Swap them in standings to reflect true order
+                }
+            } else {
+                // Tie NOT resolved - mark both as needing tie-breaker
+                standingsArray[1].needsTieBreaker = true;
+                standingsArray[2].needsTieBreaker = true;
+            }
+        }
+    }
+    
+    // Position 3: Wild card (only for non 1P/SE groups)
+    if (hasWildCard && standingsArray.length >= 3 && !standingsArray[2].qualified && !standingsArray[2].needsTieBreaker) {
+        if (pos3Points > pos4Points || !pos4Points) {
+            // Clear #3 for wild card
+            standingsArray[2].qualified = true;
+        } else if (pos3Points === pos4Points) {
+            // Tie between pos 3 and 4 - fight for wild card spot
+            const tieWinner = getTieBreakWinner(3, pos3Points);
+            if (tieWinner) {
+                if (standingsArray[2].teamId === tieWinner) {
+                    standingsArray[2].qualified = true;
+                } else if (standingsArray[3].teamId === tieWinner) {
+                    standingsArray[3].qualified = true;
+                }
+            } else {
+                standingsArray[2].needsTieBreaker = true;
+                standingsArray[3].needsTieBreaker = true;
+            }
+        }
+    }
     
     return standingsArray;
 }
@@ -2326,49 +2357,69 @@ function detectTieBreakers() {
     
     Object.keys(tournamentData).forEach(groupName => {
         const standings = calculateStandings(groupName);
-        const groupTies = [];
+        const hasWildCard = (groupName !== '1 P' && groupName !== 'SE');
         
-        // Check for ties at qualifying positions
-        // Position 1-2: Guaranteed qualification
-        // Position 3: Wild card (for most groups)
+        if (standings.length < 3) return;
         
-        // Group teams by points
-        const pointsGroups = {};
-        standings.forEach((team, index) => {
-            if (!pointsGroups[team.points]) {
-                pointsGroups[team.points] = [];
-            }
-            pointsGroups[team.points].push({ ...team, originalRank: index + 1 });
-        });
+        const pos1Points = standings[0]?.points;
+        const pos2Points = standings[1]?.points;
+        const pos3Points = standings[2]?.points;
+        const pos4Points = standings[3]?.points;
         
-        // Check each points group for ties at critical positions
-        Object.keys(pointsGroups).forEach(points => {
-            const teamsAtPoints = pointsGroups[points];
-            if (teamsAtPoints.length > 1) {
-                // Check if any of these teams are at qualifying positions
-                const criticalTeams = teamsAtPoints.filter(t => {
-                    // Positions 1, 2 (guaranteed) or 3 (wild card for non 1P/SE groups)
-                    if (t.originalRank <= 2) return true;
-                    if (t.originalRank === 3 && groupName !== '1 P' && groupName !== 'SE') return true;
-                    // Also include rank 4 if they're tied with rank 3
-                    if (t.originalRank <= 4 && teamsAtPoints.some(x => x.originalRank <= 3)) return true;
-                    return false;
+        // Check if all matches complete
+        const teamData = tournamentData[groupName];
+        const totalMatches = teamData.matches.length;
+        const completedMatches = teamData.matches.filter(m => m.winner && m.runner).length;
+        if (completedMatches < totalMatches) return; // Skip incomplete groups
+        
+        // CASE 1: Tie between position 2 and 3 (fight for 2nd guaranteed spot)
+        // Only if pos2 != pos1 (otherwise both 1 and 2 are tied and both qualify)
+        if (pos2Points === pos3Points && pos1Points > pos2Points) {
+            const key = `${groupName}_pos2_${pos2Points}`;
+            if (!tieBreakersData.resolved[key]) {
+                tieBreakers.push({
+                    groupName: groupName,
+                    points: pos2Points,
+                    teams: [standings[1], standings[2]],
+                    positions: [2, 3],
+                    type: 'guaranteed',
+                    description: 'Fight for 2nd guaranteed spot',
+                    key: key
                 });
-                
-                if (criticalTeams.length > 1) {
-                    groupTies.push({
-                        groupName: groupName,
-                        points: parseInt(points),
-                        teams: criticalTeams,
-                        positions: criticalTeams.map(t => t.originalRank),
-                        type: criticalTeams.some(t => t.originalRank <= 2) ? 'guaranteed' : 'wildcard'
-                    });
-                }
             }
-        });
+        }
         
-        if (groupTies.length > 0) {
-            tieBreakers.push(...groupTies);
+        // CASE 2: Tie between position 3 and 4 (fight for wild card spot)
+        // Only for groups with wild card
+        if (hasWildCard && pos3Points === pos4Points && pos4Points !== undefined) {
+            const key = `${groupName}_pos3_${pos3Points}`;
+            if (!tieBreakersData.resolved[key]) {
+                tieBreakers.push({
+                    groupName: groupName,
+                    points: pos3Points,
+                    teams: [standings[2], standings[3]],
+                    positions: [3, 4],
+                    type: 'wildcard',
+                    description: 'Fight for wild card spot',
+                    key: key
+                });
+            }
+        }
+        
+        // CASE 3: Three-way tie at positions 2, 3, 4 
+        if (pos2Points === pos3Points && pos3Points === pos4Points && pos1Points > pos2Points) {
+            const key = `${groupName}_pos234_${pos2Points}`;
+            if (!tieBreakersData.resolved[key]) {
+                tieBreakers.push({
+                    groupName: groupName,
+                    points: pos2Points,
+                    teams: [standings[1], standings[2], standings[3]],
+                    positions: [2, 3, 4],
+                    type: hasWildCard ? 'both' : 'guaranteed',
+                    description: hasWildCard ? 'Fight for 2nd spot AND wild card' : 'Fight for 2nd guaranteed spot',
+                    key: key
+                });
+            }
         }
     });
     
@@ -2392,7 +2443,7 @@ function renderTieBreakersView() {
             <div style="padding: 3rem; text-align: center;">
                 <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
                 <h3 style="color: var(--success-color); margin-bottom: 0.5rem;">No Tie-Breakers Required!</h3>
-                <p style="color: var(--text-light);">All qualifying positions are clear. Proceed to the Knockout tab.</p>
+                <p style="color: var(--text-light);">All qualifying positions are clear. Proceed to the Knockout tab to calculate qualified teams.</p>
             </div>
         `;
         return;
@@ -2400,76 +2451,125 @@ function renderTieBreakersView() {
     
     let html = `
         <div style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(202, 138, 4, 0.1)); border-radius: 0.75rem; border: 2px solid #eab308;">
-            <h3 style="color: #eab308; margin-bottom: 0.5rem;">⚠️ ${tieBreakers.length} Tie-Breaker Situation${tieBreakers.length > 1 ? 's' : ''} Detected</h3>
-            <p style="color: var(--text-light); margin: 0;">Resolve these before calculating qualified teams for knockout.</p>
+            <h3 style="color: #eab308; margin-bottom: 0.5rem;">⚠️ ${tieBreakers.length} Tie-Breaker Match${tieBreakers.length > 1 ? 'es' : ''} Required</h3>
+            <p style="color: var(--text-light); margin: 0;">Play these matches and enter results below. Once resolved, qualified teams will be updated automatically.</p>
         </div>
     `;
     
     tieBreakers.forEach((tie, index) => {
-        const isResolved = tieBreakersData.resolved[`${tie.groupName}_${tie.points}`];
+        const isResolved = tieBreakersData.resolved[tie.key];
+        const winnerTeam = isResolved ? tie.teams.find(t => t.teamId === isResolved) : null;
         
         html += `
-            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--bg-dark); border-radius: 0.75rem; border: 2px solid ${isResolved ? 'var(--success-color)' : '#eab308'};">
+            <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: var(--bg-dark); border-radius: 0.75rem; border: 3px solid ${isResolved ? 'var(--success-color)' : '#eab308'};">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <div>
-                        <h3 style="color: var(--primary-color); margin: 0;">${tie.groupName}</h3>
+                        <h3 style="color: var(--primary-color); margin: 0;">
+                            🥊 Tie-Breaker Match #${index + 1}: ${tie.groupName}
+                        </h3>
                         <p style="color: var(--text-light); margin: 0.25rem 0 0 0;">
-                            ${tie.teams.length} teams tied at <strong>${tie.points} points</strong> 
-                            (Positions: ${tie.positions.join(', ')})
-                            <span style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; background: ${tie.type === 'guaranteed' ? 'var(--primary-color)' : 'var(--accent-color)'}; border-radius: 0.25rem; font-size: 0.75rem;">
-                                ${tie.type === 'guaranteed' ? '🏆 Guaranteed Spot' : '🎟️ Wild Card Spot'}
+                            ${tie.description} | <strong>${tie.points} points</strong> each
+                            <span style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; background: ${tie.type === 'guaranteed' ? 'var(--primary-color)' : tie.type === 'wildcard' ? 'var(--accent-color)' : '#eab308'}; border-radius: 0.25rem; font-size: 0.75rem;">
+                                ${tie.type === 'guaranteed' ? '🏆 Guaranteed Spot' : tie.type === 'wildcard' ? '🎟️ Wild Card' : '🏆 + 🎟️'}
                             </span>
                         </p>
                     </div>
-                    ${isResolved ? '<span style="color: var(--success-color); font-weight: 700;">✅ Resolved</span>' : ''}
+                    ${isResolved ? '<span style="color: var(--success-color); font-weight: 700; font-size: 1.1rem;">✅ RESOLVED</span>' : '<span style="color: #eab308; font-weight: 700;">⏳ PENDING</span>'}
                 </div>
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <!-- Match Display -->
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
         `;
         
-        tie.teams.forEach(team => {
-            const isWinner = isResolved === team.teamId;
-            html += `
-                <div style="padding: 1rem; background: ${isWinner ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))' : 'var(--bg-light)'}; border-radius: 0.5rem; border: 2px solid ${isWinner ? 'var(--success-color)' : 'transparent'}; text-align: center;">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary-color);">${team.teamId}</div>
-                    <div style="font-size: 0.85rem; color: var(--text-light); margin: 0.25rem 0;">${team.name1}${team.name2 ? ' & ' + team.name2 : ''}</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
-                        <span style="color: var(--text-secondary);">Rank ${team.originalRank}</span> |
-                        <span style="color: var(--success-color);">${team.won}W</span> |
-                        <span style="color: var(--error-color);">${team.lost}L</span> |
-                        <span style="color: #eab308;">${team.drawn}D</span>
-                    </div>
-                    ${APP_STATE.isAdmin && !isResolved ? `
-                        <button onclick="setTieBreakWinner('${tie.groupName}', ${tie.points}, '${team.teamId}')" 
-                                class="btn btn-success" style="margin-top: 0.75rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                            🏆 Set as Winner
-                        </button>
-                    ` : ''}
-                    ${isWinner ? '<div style="margin-top: 0.5rem; color: var(--success-color); font-weight: 700;">🏆 Winner</div>' : ''}
-                </div>
-            `;
-        });
-        
+        // Team 1
+        const team1 = tie.teams[0];
+        const team1IsWinner = isResolved === team1.teamId;
         html += `
+            <div style="padding: 1.25rem; background: ${team1IsWinner ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))' : 'var(--bg-light)'}; border-radius: 0.75rem; border: 3px solid ${team1IsWinner ? 'var(--success-color)' : 'transparent'}; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);">${team1.teamId}</div>
+                <div style="font-size: 0.9rem; color: var(--text-light); margin: 0.25rem 0;">${team1.name1}${team1.name2 ? ' & ' + team1.name2 : ''}</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                    <span style="color: var(--text-secondary);">Pos ${tie.positions[0]}</span> |
+                    <span style="color: var(--success-color);">${team1.won}W</span>
+                    <span style="color: var(--error-color);">${team1.lost}L</span>
+                    <span style="color: #eab308;">${team1.drawn}D</span>
                 </div>
-                ${APP_STATE.isAdmin && isResolved ? `
-                    <button onclick="resetTieBreak('${tie.groupName}', ${tie.points})" 
-                            class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
-                        🔄 Reset This Tie-Breaker
-                    </button>
-                ` : ''}
+                ${team1IsWinner ? '<div style="margin-top: 0.75rem; color: var(--success-color); font-weight: 700; font-size: 1.1rem;">🏆 WINNER</div>' : ''}
             </div>
         `;
+        
+        // VS
+        html += `
+            <div style="text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--text-secondary);">VS</div>
+            </div>
+        `;
+        
+        // Team 2
+        const team2 = tie.teams[1];
+        const team2IsWinner = isResolved === team2.teamId;
+        html += `
+            <div style="padding: 1.25rem; background: ${team2IsWinner ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))' : 'var(--bg-light)'}; border-radius: 0.75rem; border: 3px solid ${team2IsWinner ? 'var(--success-color)' : 'transparent'}; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--secondary-color);">${team2.teamId}</div>
+                <div style="font-size: 0.9rem; color: var(--text-light); margin: 0.25rem 0;">${team2.name1}${team2.name2 ? ' & ' + team2.name2 : ''}</div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                    <span style="color: var(--text-secondary);">Pos ${tie.positions[1]}</span> |
+                    <span style="color: var(--success-color);">${team2.won}W</span>
+                    <span style="color: var(--error-color);">${team2.lost}L</span>
+                    <span style="color: #eab308;">${team2.drawn}D</span>
+                </div>
+                ${team2IsWinner ? '<div style="margin-top: 0.75rem; color: var(--success-color); font-weight: 700; font-size: 1.1rem;">🏆 WINNER</div>' : ''}
+            </div>
+        `;
+        
+        html += `</div>`; // Close match display grid
+        
+        // Admin controls for entering result
+        if (APP_STATE.isAdmin) {
+            if (!isResolved) {
+                html += `
+                    <div style="padding: 1rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border-radius: 0.5rem; margin-top: 1rem;">
+                        <p style="color: var(--text-light); margin: 0 0 0.75rem 0; font-size: 0.9rem;">
+                            <strong>Enter Match Result:</strong> Select the winner of the tie-breaker match
+                        </p>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button onclick="setTieBreakWinner('${tie.key}', '${team1.teamId}')" 
+                                    class="btn btn-success" style="flex: 1; min-width: 150px; padding: 0.75rem;">
+                                🏆 ${team1.teamId} Wins
+                            </button>
+                            <button onclick="setTieBreakWinner('${tie.key}', '${team2.teamId}')" 
+                                    class="btn btn-success" style="flex: 1; min-width: 150px; padding: 0.75rem;">
+                                🏆 ${team2.teamId} Wins
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--success-color);">
+                            ✅ <strong>${winnerTeam?.teamId}</strong> won and qualifies for knockout!
+                        </span>
+                        <button onclick="resetTieBreak('${tie.key}')" 
+                                class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            🔄 Reset Result
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        html += `</div>`; // Close tie-breaker card
     });
     
     // Summary
-    const resolvedCount = Object.keys(tieBreakersData.resolved).length;
+    const resolvedCount = tieBreakers.filter(t => tieBreakersData.resolved[t.key]).length;
     html += `
-        <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-light); border-radius: 0.5rem;">
-            <strong>Progress:</strong> ${resolvedCount} / ${tieBreakers.length} tie-breakers resolved
+        <div style="margin-top: 2rem; padding: 1.25rem; background: var(--bg-light); border-radius: 0.75rem; text-align: center;">
+            <strong style="font-size: 1.1rem;">Progress: ${resolvedCount} / ${tieBreakers.length} tie-breakers resolved</strong>
             ${resolvedCount === tieBreakers.length ? 
-                '<span style="margin-left: 1rem; color: var(--success-color);">✅ All resolved! You can now calculate qualified teams.</span>' : 
-                '<span style="margin-left: 1rem; color: #eab308;">⚠️ Resolve all tie-breakers before proceeding to knockout.</span>'
+                '<p style="margin: 0.5rem 0 0 0; color: var(--success-color);">✅ All resolved! Go to <strong>🏆 Knockout</strong> tab to calculate qualified teams.</p>' : 
+                '<p style="margin: 0.5rem 0 0 0; color: #eab308;">⚠️ Play the remaining tie-breaker matches and enter results above.</p>'
             }
         </div>
     `;
@@ -2477,25 +2577,25 @@ function renderTieBreakersView() {
     container.innerHTML = html;
 }
 
-function setTieBreakWinner(groupName, points, winnerTeamId) {
-    const key = `${groupName}_${points}`;
+function setTieBreakWinner(key, winnerTeamId) {
     tieBreakersData.resolved[key] = winnerTeamId;
     
     // Save to localStorage for persistence
     localStorage.setItem('felizzo_tiebreakers', JSON.stringify(tieBreakersData));
     
-    alert(`✅ ${winnerTeamId} set as tie-breaker winner for ${groupName}!`);
+    alert(`✅ ${winnerTeamId} wins the tie-breaker and qualifies!`);
     renderTieBreakersView();
     renderAllViews(); // Refresh standings too
 }
 
-function resetTieBreak(groupName, points) {
-    const key = `${groupName}_${points}`;
+function resetTieBreak(key) {
+    if (!confirm('Are you sure you want to reset this tie-breaker result?')) return;
+    
     delete tieBreakersData.resolved[key];
     
     localStorage.setItem('felizzo_tiebreakers', JSON.stringify(tieBreakersData));
     
-    alert(`🔄 Tie-breaker reset for ${groupName}`);
+    alert(`🔄 Tie-breaker result reset`);
     renderTieBreakersView();
     renderAllViews();
 }
@@ -2532,10 +2632,7 @@ function calculateQualifiedTeams() {
     console.log('🏆 Calculating qualified teams...');
     
     // First check if all tie-breakers are resolved
-    const unresolvedTieBreakers = detectTieBreakers().filter(tie => {
-        const key = `${tie.groupName}_${tie.points}`;
-        return !tieBreakersData.resolved[key];
-    });
+    const unresolvedTieBreakers = detectTieBreakers();
     
     if (unresolvedTieBreakers.length > 0) {
         const groups = unresolvedTieBreakers.map(t => t.groupName).join(', ');
