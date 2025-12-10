@@ -566,10 +566,65 @@ function calculateStandings(teamName) {
         return a.played - b.played;
     });
     
-    // Mark top 2 as qualified ONLY if all matches are complete
+    // Mark qualification status based on Santo's logic
     standingsArray.forEach((team, index) => {
-        team.qualified = allMatchesComplete && (index < 2);
         team.rank = index + 1;
+        team.qualified = false;
+        team.qualificationType = null;
+        
+        if (!allMatchesComplete) {
+            return; // No qualification until all matches complete
+        }
+        
+        // Check for ties at each position
+        const position = index + 1;
+        const currentPoints = team.points;
+        const nextTeam = standingsArray[index + 1];
+        const prevTeam = standingsArray[index - 1];
+        
+        // Position 1 - Always qualified unless tied with position 2
+        if (position === 1) {
+            if (nextTeam && nextTeam.points === currentPoints) {
+                team.qualificationType = 'Tie-Breaker Needed';
+            } else {
+                team.qualified = true;
+                team.qualificationType = 'Guaranteed (1st)';
+            }
+        }
+        // Position 2 - Qualified unless tied with position 1 or 3
+        else if (position === 2) {
+            if (prevTeam && prevTeam.points === currentPoints) {
+                team.qualificationType = 'Tie-Breaker Needed';
+            } else if (nextTeam && nextTeam.points === currentPoints) {
+                team.qualificationType = 'Tie-Breaker Needed';
+            } else {
+                team.qualified = true;
+                team.qualificationType = 'Guaranteed (2nd)';
+            }
+        }
+        // Position 3 - Wild card eligible (except 1P and SE)
+        else if (position === 3) {
+            if (teamName === '1 P' || teamName === 'SE') {
+                // 1P and SE 3rd place: Play-in match
+                team.qualificationType = 'Play-In Match';
+            } else if (prevTeam && prevTeam.points === currentPoints) {
+                // Tied with position 2
+                team.qualificationType = 'Tie-Breaker Needed';
+            } else if (nextTeam && nextTeam.points === currentPoints) {
+                // Tied with position 4 for wild card
+                team.qualificationType = 'Wild Card Tie-Breaker';
+            } else {
+                // Clear 3rd place - gets wild card
+                team.qualified = true;
+                team.qualificationType = 'Wild Card (3rd)';
+            }
+        }
+        // Position 4+ - Check if tied with position 3 for wild card
+        else if (position === 4 && teamName !== '1 P' && teamName !== 'SE') {
+            if (prevTeam && prevTeam.points === currentPoints) {
+                team.qualificationType = 'Wild Card Tie-Breaker';
+            }
+        }
     });
     
     return standingsArray;
@@ -651,6 +706,18 @@ function renderTeamStandings(teamName) {
     
     standings.forEach(team => {
         const rowClass = team.qualified ? 'qualified' : '';
+        let statusHtml = '-';
+        
+        if (team.qualificationType) {
+            if (team.qualified) {
+                // Qualified teams - green badge
+                statusHtml = `<span class="qualified-badge">${team.qualificationType}</span>`;
+            } else if (team.qualificationType.includes('Tie-Breaker') || team.qualificationType.includes('Play-In')) {
+                // Pending matches - yellow badge
+                statusHtml = `<span style="background: var(--warning-color); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">${team.qualificationType}</span>`;
+            }
+        }
+        
         html += `
             <tr class="${rowClass}">
                 <td><strong>${team.rank}</strong></td>
@@ -661,7 +728,7 @@ function renderTeamStandings(teamName) {
                 <td>${team.lost}</td>
                 <td>${team.drawn}</td>
                 <td><strong>${team.points}</strong></td>
-                <td>${team.qualified ? '<span class="qualified-badge">Qualified</span>' : '-'}</td>
+                <td>${statusHtml}</td>
             </tr>
         `;
     });
