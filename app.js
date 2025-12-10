@@ -253,8 +253,22 @@ function updateSyncStatus(status, text) {
     }
 }
 
+// Standings cache for performance
+let standingsCache = {
+    data: {},
+    timestamp: 0
+};
+
+function invalidateStandingsCache() {
+    standingsCache.data = {};
+    standingsCache.timestamp = Date.now();
+}
+
 function renderAllViews() {
     if (!APP_STATE.dataLoaded) return;
+    
+    // Invalidate cache on full re-render
+    invalidateStandingsCache();
     
     // Set initial team if not set
     if (!APP_STATE.currentTeam) {
@@ -491,9 +505,16 @@ function renderCurrentView() {
     }
 }
 
-// Calculate team standings
+// Calculate team standings (with caching)
 function calculateStandings(teamName) {
+    // Check cache first
+    if (standingsCache.data[teamName]) {
+        return standingsCache.data[teamName];
+    }
+    
     const teamData = tournamentData[teamName];
+    if (!teamData) return [];
+    
     const standings = {};
     
     // Initialize standings for each participant
@@ -587,6 +608,7 @@ function calculateStandings(teamName) {
     });
     
     if (!allMatchesComplete || standingsArray.length < 2) {
+        standingsCache.data[teamName] = standingsArray;
         return standingsArray;
     }
     
@@ -671,6 +693,8 @@ function calculateStandings(teamName) {
         }
     }
     
+    // Cache and return
+    standingsCache.data[teamName] = standingsArray;
     return standingsArray;
 }
 
@@ -2352,7 +2376,7 @@ let tieBreakersData = {
 // ============================================
 
 function detectTieBreakers() {
-    console.log('🔍 Detecting tie-breakers...');
+    
     const tieBreakers = [];
     
     Object.keys(tournamentData).forEach(groupName => {
@@ -2709,7 +2733,7 @@ function renderKnockoutView() {
 // ============================================
 
 function calculateQualifiedTeams() {
-    console.log('🏆 Calculating qualified teams...');
+    
     
     // Check for unresolved tie-breakers
     const tieBreakers = detectTieBreakers();
@@ -3576,4 +3600,3 @@ function handleDateOnlySave(form) {
         });
     }
 }
-
