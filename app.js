@@ -3122,28 +3122,23 @@ function handleDateOnlySave(form) {
 
 
 // ============================================
-// TIE-BREAKER FEATURE - Added for Santo
+// TIE-BREAKER DETECTION - ADDED FOR SANTO
 // ============================================
-
 function detectTieBreakers() {
     const tieBreakers = [];
     const groupNames = Object.keys(tournamentData);
     
     groupNames.forEach(groupName => {
         const standings = calculateStandings(groupName);
-        
-        // Check top 3 for ties
         let i = 0;
         while (i < Math.min(3, standings.length)) {
             const currentPoints = standings[i].points;
             const tiedTeams = [standings[i]];
             let j = i + 1;
-            
             while (j < standings.length && standings[j].points === currentPoints) {
                 tiedTeams.push(standings[j]);
                 j++;
             }
-            
             if (tiedTeams.length > 1) {
                 tieBreakers.push({
                     group: groupName,
@@ -3152,11 +3147,9 @@ function detectTieBreakers() {
                     points: currentPoints
                 });
             }
-            
             i = j;
         }
     });
-    
     return tieBreakers;
 }
 
@@ -3167,9 +3160,9 @@ function showTieBreakerSheet() {
     let html = '<div class="card"><h2>⚖️ Tie-Breaker Sheet</h2>';
     
     if (tieBreakers.length === 0) {
-        html += '<div style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">✅ No tie-breakers! All positions clear.</div>';
+        html += '<div class="alert alert-success">✅ No tie-breakers needed! All positions are clear.</div>';
     } else {
-        html += `<div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin: 1rem 0;">⚠️ ${tieBreakers.length} tie-breaker(s) found</div>`;
+        html += `<div class="alert alert-warning">⚠️ Found ${tieBreakers.length} tie-breaker situation(s)</div>`;
         
         tieBreakers.forEach((tb, idx) => {
             html += `<div style="margin: 2rem 0; padding: 1.5rem; border: 2px solid #f59e0b; border-radius: 12px; background: #fffbeb;">
@@ -3182,7 +3175,7 @@ function showTieBreakerSheet() {
                 </div>`;
             });
             
-            html += `</div><div style="margin-top: 1rem;"><strong>Head-to-Head:</strong>
+            html += `</div><div style="margin-top: 1rem;"><strong>Head-to-Head Results:</strong>
                 <table class="standings-table" style="margin-top: 0.5rem;"><thead><tr><th>Team</th>`;
             
             tb.teams.forEach(t => html += `<th>${t.team}</th>`);
