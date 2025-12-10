@@ -65,6 +65,7 @@ function loadDataFromFirebase() {
             Object.assign(tournamentData, firebaseData);
             APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
+            loadTieBreakersFromFirebase(); // Load tie-breaker results
             renderAllViews();
         } else {
             // No data in Firebase - initialize with default data
@@ -474,6 +475,9 @@ function renderCurrentView() {
             break;
         case 'participants':
             renderParticipantsView();
+            break;
+        case 'tiebreaker':
+            renderTieBreakerView();
             break;
         case 'knockout':
             renderKnockoutView();
@@ -2290,10 +2294,173 @@ function installPWA() {
 // ============================================
 
 // Knockout data structure
+// ============================================
+// TIE-BREAKER MANAGEMENT
+// ============================================
+
+function renderTieBreakerView() {
+    if (!APP_STATE.dataLoaded) return;
+    
+    const container = document.getElementById('tiebreakerView');
+    if (!container) return;
+    
+    const qualificationData = getQualificationSummary();
+    
+    let html = '<div class="card"><h2>⚖️ Tie-Breaker Management</h2>';
+    html += '<p style="color: var(--text-secondary); margin-bottom: 2rem;">Update tie-breaker match results to determine final qualification</p>';
+    
+    if (qualificationData.tieBreakers.length === 0 && !qualificationData.playIn) {
+        html += '<div class="alert alert-success">✅ No tie-breakers needed! All qualifications are clear.</div>';
+    } else {
+        // Tie-breaker matches
+        if (qualificationData.tieBreakers.length > 0) {
+            html += '<h3 style="color: #f59e0b; margin-bottom: 1rem;">⚠️ Tie-Breaker Matches</h3>';
+            
+            qualificationData.tieBreakers.forEach((tb, idx) => {
+                const matchKey = `${tb.group}-${tb.team1}-${tb.team2}`;
+                const currentWinner = knockoutData.tieBreakerResults[matchKey];
+                
+                html += `<div style="background: white; border: 2px solid ${currentWinner ? '#10b981' : '#f59e0b'}; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="color: #92400e; margin: 0;">Match ${idx + 1}: ${tb.group}</h4>
+                        ${currentWinner ? '<span style="background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">✅ Result Updated</span>' : ''}
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                        <div style="text-align: center; padding: 1rem; background: ${currentWinner === tb.team1 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === tb.team1 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
+                            <strong style="font-size: 1.1rem;">${tb.team1}</strong><br>
+                            <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
+                            ${currentWinner === tb.team1 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
+                        </div>
+                        <div style="font-weight: 700; color: #64748b; font-size: 1.2rem;">VS</div>
+                        <div style="text-align: center; padding: 1rem; background: ${currentWinner === tb.team2 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === tb.team2 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
+                            <strong style="font-size: 1.1rem;">${tb.team2}</strong><br>
+                            <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
+                            ${currentWinner === tb.team2 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 8px; font-size: 0.9rem; color: #92400e;">
+                        ${tb.type === 'guaranteed' ? '🏆 Winner → Guaranteed Spot | Loser → Wild Card' : '🎟️ Winner → Wild Card Spot'}
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button onclick="updateTieBreakerResult('${matchKey}', '${tb.team1}')" class="btn ${currentWinner === tb.team1 ? 'btn-success' : 'btn-primary'}">
+                            ${tb.team1} Wins
+                        </button>
+                        <button onclick="updateTieBreakerResult('${matchKey}', '${tb.team2}')" class="btn ${currentWinner === tb.team2 ? 'btn-success' : 'btn-primary'}">
+                            ${tb.team2} Wins
+                        </button>
+                    </div>
+                </div>`;
+            });
+        }
+        
+        // Play-in match
+        if (qualificationData.playIn) {
+            const playInKey = 'playin-1P-SE';
+            const currentWinner = knockoutData.tieBreakerResults[playInKey];
+            
+            html += '<h3 style="color: #8b5cf6; margin: 2rem 0 1rem 0;">🥊 Play-In Match (32nd Spot)</h3>';
+            html += `<div style="background: white; border: 2px solid ${currentWinner ? '#10b981' : '#8b5cf6'}; border-radius: 12px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="color: #6d28d9; margin: 0;">Final Qualification Match</h4>
+                    ${currentWinner ? '<span style="background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">✅ Result Updated</span>' : ''}
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                    <div style="text-align: center; padding: 1rem; background: ${currentWinner === qualificationData.playIn.team1 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === qualificationData.playIn.team1 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
+                        <strong style="font-size: 1.1rem;">${qualificationData.playIn.team1}</strong><br>
+                        <span style="font-size: 0.85rem; color: #64748b;">1 P - 3rd place</span>
+                        ${currentWinner === qualificationData.playIn.team1 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
+                    </div>
+                    <div style="font-weight: 700; color: #64748b; font-size: 1.2rem;">VS</div>
+                    <div style="text-align: center; padding: 1rem; background: ${currentWinner === qualificationData.playIn.team2 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === qualificationData.playIn.team2 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
+                        <strong style="font-size: 1.1rem;">${qualificationData.playIn.team2}</strong><br>
+                        <span style="font-size: 0.85rem; color: #64748b;">SE - 3rd place</span>
+                        ${currentWinner === qualificationData.playIn.team2 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: #ede9fe; border-radius: 8px; font-size: 0.9rem; color: #6d28d9;">
+                    🏆 Winner gets the 32nd and final knockout spot
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button onclick="updateTieBreakerResult('${playInKey}', '${qualificationData.playIn.team1}')" class="btn ${currentWinner === qualificationData.playIn.team1 ? 'btn-success' : 'btn-primary'}">
+                        ${qualificationData.playIn.team1} Wins
+                    </button>
+                    <button onclick="updateTieBreakerResult('${playInKey}', '${qualificationData.playIn.team2}')" class="btn ${currentWinner === qualificationData.playIn.team2 ? 'btn-success' : 'btn-primary'}">
+                        ${qualificationData.playIn.team2} Wins
+                    </button>
+                </div>
+            </div>`;
+        }
+        
+        // Action buttons
+        html += `<div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-light); border-radius: 12px; display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="resetAllTieBreakers()" class="btn btn-danger">
+                🔄 Reset All Results
+            </button>
+            <button onclick="saveTieBreakersToFirebase()" class="btn btn-success">
+                💾 Save to Firebase
+            </button>
+        </div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function updateTieBreakerResult(matchKey, winner) {
+    knockoutData.tieBreakerResults[matchKey] = winner;
+    renderTieBreakerView();
+    renderKnockoutView(); // Update knockout view immediately
+    updateSyncStatus('modified', '⚠️ Unsaved changes');
+}
+
+function resetAllTieBreakers() {
+    if (!confirm('Are you sure you want to reset all tie-breaker results? This cannot be undone.')) {
+        return;
+    }
+    knockoutData.tieBreakerResults = {};
+    renderTieBreakerView();
+    renderKnockoutView();
+    updateSyncStatus('modified', '⚠️ Unsaved changes');
+}
+
+function saveTieBreakersToFirebase() {
+    const tieBreakerRef = firebase.database().ref('tieBreakerResults');
+    tieBreakerRef.set(knockoutData.tieBreakerResults)
+        .then(() => {
+            alert('✅ Tie-breaker results saved successfully!');
+            updateSyncStatus('synced', '✅ Synced');
+        })
+        .catch((error) => {
+            console.error('Error saving tie-breakers:', error);
+            alert('❌ Failed to save tie-breaker results');
+        });
+}
+
+function loadTieBreakersFromFirebase() {
+    const tieBreakerRef = firebase.database().ref('tieBreakerResults');
+    tieBreakerRef.once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            knockoutData.tieBreakerResults = snapshot.val();
+            console.log('✅ Tie-breaker results loaded from Firebase');
+        }
+    });
+}
+
+// ============================================
+// KNOCKOUT STAGE
+// ============================================
+
 let knockoutData = {
     qualifiedTeams: [],
     playInMatch: null,
-    bracket: null
+    bracket: null,
+    tieBreakerResults: {} // Stores tie-breaker match results: { 'groupName-team1-team2': 'winner' }
 };
 
 function renderKnockoutView() {
@@ -2436,15 +2603,66 @@ function getQualificationSummary() {
                 // Find the tie-breaker pair
                 const nextTeam = standings[idx + 1];
                 if (nextTeam && nextTeam.points === team.points) {
-                    // Only add once per pair
-                    if (!tieBreakers.find(tb => tb.group === groupName && tb.team1 === team.teamId)) {
-                        tieBreakers.push({
-                            group: groupName,
-                            team1: team.teamId,
-                            team2: nextTeam.teamId,
-                            points: team.points,
-                            type: idx < 2 ? 'guaranteed' : 'wildcard'
-                        });
+                    const matchKey = `${groupName}-${team.teamId}-${nextTeam.teamId}`;
+                    const winner = knockoutData.tieBreakerResults[matchKey];
+                    
+                    // If tie-breaker is resolved, add winner to appropriate category
+                    if (winner) {
+                        const isGuaranteedMatch = idx < 2;
+                        if (isGuaranteedMatch) {
+                            // Winner gets guaranteed spot
+                            if (winner === team.teamId) {
+                                guaranteed.push({
+                                    group: groupName,
+                                    position: idx + 1,
+                                    teamId: team.teamId,
+                                    points: team.points
+                                });
+                            } else if (winner === nextTeam.teamId) {
+                                guaranteed.push({
+                                    group: groupName,
+                                    position: idx + 2,
+                                    teamId: nextTeam.teamId,
+                                    points: nextTeam.points
+                                });
+                            }
+                            // Loser gets wild card (if not 1P or SE)
+                            if (groupName !== '1 P' && groupName !== 'SE') {
+                                const loser = winner === team.teamId ? nextTeam.teamId : team.teamId;
+                                const loserPoints = winner === team.teamId ? nextTeam.points : team.points;
+                                wildCards.push({
+                                    group: groupName,
+                                    teamId: loser,
+                                    points: loserPoints
+                                });
+                            }
+                        } else {
+                            // Wild card match - only winner qualifies
+                            if (winner === team.teamId) {
+                                wildCards.push({
+                                    group: groupName,
+                                    teamId: team.teamId,
+                                    points: team.points
+                                });
+                            } else if (winner === nextTeam.teamId) {
+                                wildCards.push({
+                                    group: groupName,
+                                    teamId: nextTeam.teamId,
+                                    points: nextTeam.points
+                                });
+                            }
+                        }
+                    } else {
+                        // Tie-breaker not yet resolved - add to pending list
+                        if (!tieBreakers.find(tb => tb.group === groupName && tb.team1 === team.teamId)) {
+                            tieBreakers.push({
+                                group: groupName,
+                                team1: team.teamId,
+                                team2: nextTeam.teamId,
+                                points: team.points,
+                                type: idx < 2 ? 'guaranteed' : 'wildcard'
+                            });
+                        }
                     }
                 }
             } else if (team.qualificationType === 'Play-In Match') {
@@ -2459,6 +2677,18 @@ function getQualificationSummary() {
             }
         });
     });
+    
+    // Check if play-in is resolved
+    const playInKey = 'playin-1P-SE';
+    const playInWinner = knockoutData.tieBreakerResults[playInKey];
+    if (playInWinner && playIn) {
+        wildCards.push({
+            group: playInWinner === playIn.team1 ? '1 P' : 'SE',
+            teamId: playInWinner,
+            points: 0 // We don't track points for play-in
+        });
+        playIn = null; // Mark as resolved
+    }
     
     return { guaranteed, wildCards, tieBreakers, playIn };
 }
