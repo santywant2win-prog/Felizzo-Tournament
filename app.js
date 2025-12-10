@@ -2319,6 +2319,8 @@ function renderTieBreakerView() {
             qualificationData.tieBreakers.forEach((tb, idx) => {
                 const matchKey = `${tb.group}-${tb.team1}-${tb.team2}`;
                 const currentWinner = knockoutData.tieBreakerResults[matchKey];
+                const names1 = getTeamDisplay(tb.group, tb.team1);
+                const names2 = getTeamDisplay(tb.group, tb.team2);
                 
                 html += `<div style="background: white; border: 2px solid ${currentWinner ? '#10b981' : '#f59e0b'}; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -2328,13 +2330,13 @@ function renderTieBreakerView() {
                     
                     <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
                         <div style="text-align: center; padding: 1rem; background: ${currentWinner === tb.team1 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === tb.team1 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
-                            <strong style="font-size: 1.1rem;">${tb.team1}</strong><br>
+                            <strong style="font-size: 1.1rem;">${names1}</strong><br>
                             <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
                             ${currentWinner === tb.team1 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
                         </div>
                         <div style="font-weight: 700; color: #64748b; font-size: 1.2rem;">VS</div>
                         <div style="text-align: center; padding: 1rem; background: ${currentWinner === tb.team2 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === tb.team2 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
-                            <strong style="font-size: 1.1rem;">${tb.team2}</strong><br>
+                            <strong style="font-size: 1.1rem;">${names2}</strong><br>
                             <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
                             ${currentWinner === tb.team2 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
                         </div>
@@ -2346,10 +2348,10 @@ function renderTieBreakerView() {
                     
                     <div style="display: flex; gap: 1rem; justify-content: center;">
                         <button onclick="updateTieBreakerResult('${matchKey}', '${tb.team1}')" class="btn ${currentWinner === tb.team1 ? 'btn-success' : 'btn-primary'}">
-                            ${tb.team1} Wins
+                            ${names1} Wins
                         </button>
                         <button onclick="updateTieBreakerResult('${matchKey}', '${tb.team2}')" class="btn ${currentWinner === tb.team2 ? 'btn-success' : 'btn-primary'}">
-                            ${tb.team2} Wins
+                            ${names2} Wins
                         </button>
                     </div>
                 </div>`;
@@ -2360,6 +2362,8 @@ function renderTieBreakerView() {
         if (qualificationData.playIn) {
             const playInKey = 'playin-1P-SE';
             const currentWinner = knockoutData.tieBreakerResults[playInKey];
+            const names1 = getTeamDisplay('1 P', qualificationData.playIn.team1);
+            const names2 = getTeamDisplay('SE', qualificationData.playIn.team2);
             
             html += '<h3 style="color: #8b5cf6; margin: 2rem 0 1rem 0;">🥊 Play-In Match (32nd Spot)</h3>';
             html += `<div style="background: white; border: 2px solid ${currentWinner ? '#10b981' : '#8b5cf6'}; border-radius: 12px; padding: 1.5rem;">
@@ -2370,13 +2374,13 @@ function renderTieBreakerView() {
                 
                 <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 1rem;">
                     <div style="text-align: center; padding: 1rem; background: ${currentWinner === qualificationData.playIn.team1 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === qualificationData.playIn.team1 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
-                        <strong style="font-size: 1.1rem;">${qualificationData.playIn.team1}</strong><br>
+                        <strong style="font-size: 1.1rem;">${names1}</strong><br>
                         <span style="font-size: 0.85rem; color: #64748b;">1 P - 3rd place</span>
                         ${currentWinner === qualificationData.playIn.team1 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
                     </div>
                     <div style="font-weight: 700; color: #64748b; font-size: 1.2rem;">VS</div>
                     <div style="text-align: center; padding: 1rem; background: ${currentWinner === qualificationData.playIn.team2 ? '#d1fae5' : '#f9fafb'}; border: 2px solid ${currentWinner === qualificationData.playIn.team2 ? '#10b981' : '#e5e7eb'}; border-radius: 8px;">
-                        <strong style="font-size: 1.1rem;">${qualificationData.playIn.team2}</strong><br>
+                        <strong style="font-size: 1.1rem;">${names2}</strong><br>
                         <span style="font-size: 0.85rem; color: #64748b;">SE - 3rd place</span>
                         ${currentWinner === qualificationData.playIn.team2 ? '<div style="margin-top: 0.5rem; color: #10b981; font-weight: 700;">👑 WINNER</div>' : ''}
                     </div>
@@ -2388,10 +2392,10 @@ function renderTieBreakerView() {
                 
                 <div style="display: flex; gap: 1rem; justify-content: center;">
                     <button onclick="updateTieBreakerResult('${playInKey}', '${qualificationData.playIn.team1}')" class="btn ${currentWinner === qualificationData.playIn.team1 ? 'btn-success' : 'btn-primary'}">
-                        ${qualificationData.playIn.team1} Wins
+                        ${names1} Wins
                     </button>
                     <button onclick="updateTieBreakerResult('${playInKey}', '${qualificationData.playIn.team2}')" class="btn ${currentWinner === qualificationData.playIn.team2 ? 'btn-success' : 'btn-primary'}">
-                        ${qualificationData.playIn.team2} Wins
+                        ${names2} Wins
                     </button>
                 </div>
             </div>`;
@@ -2497,13 +2501,14 @@ function renderKnockoutView() {
     // Guaranteed qualified teams
     if (qualificationData.guaranteed.length > 0) {
         html += '<h3 style="color: #10b981; margin: 2rem 0 1rem 0;">✅ Guaranteed Qualified (Top 2)</h3>';
-        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Position</th><th>Team</th><th>Points</th></tr></thead><tbody>';
+        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Position</th><th>Participants</th><th>Points</th></tr></thead><tbody>';
         qualificationData.guaranteed.forEach((team, idx) => {
+            const names = getTeamDisplay(team.group, team.teamId);
             html += `<tr>
                 <td>${idx + 1}</td>
                 <td><strong>${team.group}</strong></td>
                 <td>${team.position}${team.position === 1 ? 'st' : 'nd'}</td>
-                <td>${team.teamId}</td>
+                <td>${names}</td>
                 <td><strong>${team.points}</strong></td>
             </tr>`;
         });
@@ -2513,12 +2518,13 @@ function renderKnockoutView() {
     // Wild card qualified teams
     if (qualificationData.wildCards.length > 0) {
         html += '<h3 style="color: #3b82f6; margin: 2rem 0 1rem 0;">🎟️ Wild Card Qualified (3rd Place)</h3>';
-        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Team</th><th>Points</th></tr></thead><tbody>';
+        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Participants</th><th>Points</th></tr></thead><tbody>';
         qualificationData.wildCards.forEach((team, idx) => {
+            const names = getTeamDisplay(team.group, team.teamId);
             html += `<tr>
                 <td>${qualificationData.guaranteed.length + idx + 1}</td>
                 <td><strong>${team.group}</strong></td>
-                <td>${team.teamId}</td>
+                <td>${names}</td>
                 <td><strong>${team.points}</strong></td>
             </tr>`;
         });
@@ -2530,16 +2536,18 @@ function renderKnockoutView() {
         html += '<h3 style="color: #f59e0b; margin: 2rem 0 1rem 0;">⚠️ Tie-Breakers Needed</h3>';
         html += '<div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">These matches need to be played to determine qualification</div>';
         qualificationData.tieBreakers.forEach((tb, idx) => {
+            const names1 = getTeamDisplay(tb.group, tb.team1);
+            const names2 = getTeamDisplay(tb.group, tb.team2);
             html += `<div style="background: white; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
                 <h4 style="color: #92400e; margin-bottom: 1rem;">Match ${idx + 1}: ${tb.group}</h4>
                 <div style="display: flex; align-items: center; gap: 1rem; justify-content: center;">
                     <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                        <strong>${tb.team1}</strong><br>
+                        <strong>${names1}</strong><br>
                         <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
                     </div>
                     <div style="font-weight: 700; color: #64748b;">VS</div>
                     <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                        <strong>${tb.team2}</strong><br>
+                        <strong>${names2}</strong><br>
                         <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
                     </div>
                 </div>
@@ -2552,16 +2560,18 @@ function renderKnockoutView() {
     
     // Play-in match
     if (qualificationData.playIn) {
+        const names1 = getTeamDisplay('1 P', qualificationData.playIn.team1);
+        const names2 = getTeamDisplay('SE', qualificationData.playIn.team2);
         html += '<h3 style="color: #8b5cf6; margin: 2rem 0 1rem 0;">🥊 Play-In Match (32nd Spot)</h3>';
         html += `<div style="background: white; border: 2px solid #8b5cf6; border-radius: 12px; padding: 1.5rem;">
             <div style="display: flex; align-items: center; gap: 1rem; justify-content: center;">
                 <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <strong>${qualificationData.playIn.team1}</strong><br>
+                    <strong>${names1}</strong><br>
                     <span style="font-size: 0.85rem; color: #64748b;">1 P - 3rd place</span>
                 </div>
                 <div style="font-weight: 700; color: #64748b;">VS</div>
                 <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
-                    <strong>${qualificationData.playIn.team2}</strong><br>
+                    <strong>${names2}</strong><br>
                     <span style="font-size: 0.85rem; color: #64748b;">SE - 3rd place</span>
                 </div>
             </div>
@@ -2576,6 +2586,21 @@ function renderKnockoutView() {
 }
 
 // Get current qualification summary
+// Helper to get participant names from team ID
+function getTeamDisplay(groupName, teamId) {
+    const group = tournamentData[groupName];
+    if (!group) return teamId;
+    
+    const participant = group.participants.find(p => p.teamId === teamId);
+    if (!participant) return teamId;
+    
+    const names = participant.name2 ? 
+        `${participant.name1} & ${participant.name2}` : 
+        participant.name1;
+    
+    return names;
+}
+
 function getQualificationSummary() {
     const guaranteed = [];
     const wildCards = [];
