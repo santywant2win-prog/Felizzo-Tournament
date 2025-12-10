@@ -52,6 +52,8 @@ function initializeApp() {
 }
 
 // Firebase Data Management
+let isInitialLoad = true;
+
 function loadDataFromFirebase() {
     updateSyncStatus('loading', '🔄 Loading data...');
     
@@ -60,48 +62,61 @@ function loadDataFromFirebase() {
         originalTournamentData = JSON.parse(JSON.stringify(tournamentData));
     }
     
-    tournamentRef.once('value', (snapshot) => {
+    // Use single listener instead of once + on
+    tournamentRef.on('value', (snapshot) => {
         if (snapshot.exists()) {
-            // Data exists in Firebase - use it
-            console.log('Loading data from Firebase...');
             const firebaseData = snapshot.val();
             Object.assign(tournamentData, firebaseData);
             APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
-            renderAllViews();
-        } else {
+            
+            // Only do full render on initial load
+            if (isInitialLoad) {
+                isInitialLoad = false;
+                renderAllViews();
+            } else {
+                // Subsequent updates - just invalidate cache and update current view
+                invalidateStandingsCache();
+                renderCurrentView();
+            }
+        } else if (isInitialLoad) {
             // No data in Firebase - initialize with default data
-            console.log('No data in Firebase. Initializing...');
+            
             initializeFirebaseData();
         }
-    }).catch((error) => {
+    }, (error) => {
         console.error('Error loading from Firebase:', error);
         updateSyncStatus('error', '❌ Load failed');
         // Fall back to local data
         APP_STATE.dataLoaded = true;
-        renderAllViews();
-    });
-    
-    // Listen for real-time updates
-    tournamentRef.on('value', (snapshot) => {
-        if (APP_STATE.dataLoaded && snapshot.exists()) {
-            console.log('Data updated from Firebase');
-            const firebaseData = snapshot.val();
-            Object.assign(tournamentData, firebaseData);
+        if (isInitialLoad) {
+            isInitialLoad = false;
             renderAllViews();
         }
     });
 }
 
+function renderCurrentView() {
+    // Only render the active view instead of all views
+    switch (APP_STATE.currentView) {
+        case 'home': renderHomeView(); break;
+        case 'standings': renderTeamStandings(APP_STATE.currentTeam); break;
+        case 'schedule': renderTeamSchedule(APP_STATE.currentTeam); break;
+        case 'participants': renderParticipantsView(); break;
+        case 'tiebreakers': renderTieBreakersView(); break;
+        case 'knockout': renderKnockoutView(); break;
+    }
+}
+
 function initializeFirebaseData() {
-    console.log('Initializing Firebase with default tournament data...');
+    
     
     // Pre-populate dates before saving
     populateMatchDates();
     
     tournamentRef.set(tournamentData)
         .then(() => {
-            console.log('Firebase initialized successfully with dates!');
+            
             APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
             renderAllViews();
@@ -117,9 +132,11 @@ function initializeFirebaseData() {
 function saveToFirebase(callback) {
     updateSyncStatus('saving', '💾 Saving...');
     
+    // Invalidate cache since data is changing
+    invalidateStandingsCache();
+    
     tournamentRef.set(tournamentData)
         .then(() => {
-            console.log('Data saved to Firebase successfully!');
             updateSyncStatus('synced', '✅ Synced');
             if (callback) callback(true);
         })
@@ -267,23 +284,31 @@ function invalidateStandingsCache() {
 function renderAllViews() {
     if (!APP_STATE.dataLoaded) return;
     
-    // Invalidate cache on full re-render
-    invalidateStandingsCache();
-    
     // Set initial team if not set
     if (!APP_STATE.currentTeam) {
         const firstTeam = Object.keys(tournamentData)[0];
         APP_STATE.currentTeam = firstTeam;
     }
     
-    renderHomeView();
-    renderStandingsView();
-    renderScheduleView();
-    renderParticipantsView();
-    renderTieBreakersView();
-    renderKnockoutView();
-    renderChamberView();
-    renderOverallView();
+    // Only render the ACTIVE view - not all views
+    // Other views render on-demand when user switches tabs
+    renderActiveView();
+}
+
+function renderActiveView() {
+    invalidateStandingsCache();
+    const view = APP_STATE.currentView || 'home';
+    switch (view) {
+        case 'home': renderHomeView(); break;
+        case 'standings': renderStandingsView(); break;
+        case 'schedule': renderScheduleView(); break;
+        case 'participants': renderParticipantsView(); break;
+        case 'tiebreakers': renderTieBreakersView(); break;
+        case 'knockout': renderKnockoutView(); break;
+        case 'chamber': renderChamberView(); break;
+        case 'overall': renderOverallView(); break;
+        default: renderHomeView();
+    }
 }
 
 function setupEventListeners() {
@@ -477,6 +502,11 @@ function switchView(view) {
     });
     
     document.getElementById(view + 'View').classList.add('active');
+    
+    // Render the view on-demand (lazy loading)
+    if (APP_STATE.dataLoaded) {
+        renderActiveView();
+    }
 }
 
 function renderCurrentView() {
@@ -3600,3 +3630,4 @@ function handleDateOnlySave(form) {
         });
     }
 }
+
