@@ -57,32 +57,30 @@ function loadDataFromFirebase() {
         originalTournamentData = JSON.parse(JSON.stringify(tournamentData));
     }
     
+    // Show loading immediately
+    APP_STATE.dataLoaded = true;
+    renderAllViews();
+    
+    // Load from Firebase in background
     tournamentRef.once('value', (snapshot) => {
         if (snapshot.exists()) {
-            // Data exists in Firebase - use it
-            console.log('Loading data from Firebase...');
+            console.log('✅ Data loaded from Firebase');
             const firebaseData = snapshot.val();
             Object.assign(tournamentData, firebaseData);
-            APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
-            renderAllViews();
+            renderAllViews(); // Refresh with Firebase data
         } else {
-            // No data in Firebase - initialize with default data
-            console.log('No data in Firebase. Initializing...');
+            console.log('No Firebase data, using local defaults');
             initializeFirebaseData();
         }
     }).catch((error) => {
-        console.error('Error loading from Firebase:', error);
-        updateSyncStatus('error', '❌ Load failed');
-        // Fall back to local data
-        APP_STATE.dataLoaded = true;
-        renderAllViews();
+        console.error('Firebase error:', error);
+        updateSyncStatus('error', '❌ Offline mode');
     });
     
-    // Listen for real-time updates
+    // Listen for real-time updates (but don't block initial load)
     tournamentRef.on('value', (snapshot) => {
         if (APP_STATE.dataLoaded && snapshot.exists()) {
-            console.log('Data updated from Firebase');
             const firebaseData = snapshot.val();
             Object.assign(tournamentData, firebaseData);
             renderAllViews();
