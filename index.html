@@ -4,47 +4,350 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FELIZZO '25 Carrom Tournament</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Official tournament management app for FELIZZO '25 Carrom Championship">
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FELIZZO '25">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS Icon -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230ea5e9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='280' fill='white'%3E🏆%3C/text%3E%3C/svg%3E">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="content-wrapper">
-        <h1 style="text-align: center; color: #667eea; margin-bottom: 2rem;">
-            🏆 FELIZZO '25 Carrom Tournament
-        </h1>
-        
+    <div class="container">
+        <header>
+            <h1>🏆 FELIZZO '25 Carrom Tournament</h1>
+            <div class="header-buttons">
+                <button id="backupBtn" class="btn btn-success" style="display:none;">📥 Backup</button>
+                <button id="restoreBtn" class="btn btn-warning" style="display:none;">📤 Restore</button>
+                <input type="file" id="restoreFile" accept=".json" style="display:none;">
+                <button id="syncParentBtn" class="btn btn-info" style="display:none;">🔄 Sync to Dashboard</button>
+                <button id="populateDatesBtn" class="btn btn-secondary" style="display:none;">🔄 Populate Dates</button>
+                <button id="addTeamBtn" class="btn btn-primary" style="display:none;">➕ Add Team</button>
+                <button id="resetAllBtn" class="btn btn-danger" style="display:none;">🔄 Reset ALL Matches</button>
+            </div>
+        </header>
+
+        <!-- Admin Login Modal -->
+        <div id="adminModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Admin Login</h2>
+                <input type="password" id="adminPassword" placeholder="Enter password">
+                <button id="loginBtn" class="btn btn-primary">Login</button>
+                <p id="loginError" class="error-message"></p>
+            </div>
+        </div>
+
+        <!-- Reset Confirmation Modal -->
+        <div id="resetModal" class="modal">
+            <div class="modal-content">
+                <span class="close-reset">&times;</span>
+                <h2>⚠️ Confirm Reset</h2>
+                <p id="resetMessage" style="margin: 1rem 0; font-size: 1rem;"></p>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button id="confirmResetBtn" class="btn btn-danger">Yes, Reset</button>
+                    <button id="cancelResetBtn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- First Backup Required Modal -->
+        <div id="firstBackupModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>⚠️ BACKUP REQUIRED</h2>
+                <p style="margin: 1.5rem 0; font-size: 1.1rem; line-height: 1.6;">
+                    <strong>This is your first admin login!</strong><br><br>
+                    Before managing tournament data, you must create a backup file. 
+                    This protects against accidental data loss.<br><br>
+                    Click the button below to download your backup file. 
+                    Save it somewhere safe (Desktop, Google Drive, etc.).
+                </p>
+                <button id="firstBackupBtn" class="btn btn-success" style="font-size: 1.1rem; padding: 1rem 2rem;" onclick="handleFirstBackup()">
+                    📥 Download Backup Now
+                </button>
+                <p style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
+                    You won't be able to use admin features until backup is created.
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Navigation -->
         <nav class="main-nav">
-            <button class="nav-btn active" data-view="standings">📊 Standings</button>
-            <button class="nav-btn" data-view="tiebreakers">⚖️ Tie-Breakers</button>
+            <button class="nav-btn active" data-view="home">🏠 Home</button>
+            <button class="nav-btn" data-view="standings">📊 Standings</button>
+            <button class="nav-btn" data-view="schedule">📅 Match Schedule</button>
+            <button class="nav-btn" data-view="participants">👥 Participants</button>
+            <button class="nav-btn" data-view="knockout">🏆 Knockout</button>
             <button class="nav-btn" data-view="chamber">⚡ Elimination Chamber</button>
+            <button class="nav-btn" data-view="overall">🏆 Overall Tournament</button>
         </nav>
-        
-        <div id="content">
-            <!-- Dynamic content loads here -->
+
+        <!-- Home View (Schedule) -->
+        <div id="homeView" class="view-container active">
+            <!-- Quick Match Jump (Admin Only) -->
+            <div id="quickMatchJump" class="card" style="display: none; background: linear-gradient(135deg, var(--accent-color), #7c3aed); margin-bottom: 1rem;">
+                <div style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                        <label style="color: white;">⚡ Quick Match Update</label>
+                        <input type="number" id="quickMatchNumber" placeholder="Enter match #" 
+                               style="font-size: 1.1rem; padding: 0.75rem;"
+                               onkeypress="if(event.key==='Enter') jumpToMatch()">
+                    </div>
+                    <button onclick="jumpToMatch()" class="btn btn-success" style="margin: 0;">
+                        🎯 Jump to Match
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Match Update Form (Shows when match selected) -->
+            <div id="quickMatchForm" class="card" style="display: none;">
+                <!-- Populated by JavaScript -->
+            </div>
+            
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>📅 Complete Match Schedule</h2>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            <span id="totalMatchCount">All 222 league matches</span> scheduled from November 24 to December 10, 2025
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="window.print()" class="btn btn-secondary">
+                            🖨️ Print
+                        </button>
+                        <button onclick="copyTableToClipboard()" class="btn btn-secondary">
+                            📧 Copy for Email
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>Filter by Group</label>
+                        <select id="homeFilterGroup" class="filter-select">
+                            <option value="">All Groups</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Status</label>
+                        <select id="homeFilterStatus" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="draw">Draw</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Date</label>
+                        <input type="date" id="homeFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
+                    </div>
+                    <div class="form-group">
+                        <label>Search Players/Teams</label>
+                        <input type="text" id="homeSearchText" class="filter-select" placeholder="Type to search...">
+                    </div>
+                </div>
+                
+                <!-- Filter Summary -->
+                <div id="filterSummary" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 0.75rem; border: 2px solid var(--primary-color);">
+                    <h4 style="color: var(--primary-color); margin-bottom: 1rem; font-size: 1rem;">📊 Filtered Results Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; text-align: center;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);" id="summaryTotal">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Total</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #10b981;" id="summaryCompleted">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Completed</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;" id="summaryPending">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Pending</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #6366f1;" id="summaryDraw">0</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Draws</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-color);" id="summaryPercentage">0%</div>
+                            <div style="font-size: 0.85rem; color: var(--text-light);">Complete</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="standings-table" id="scheduleTable">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Match</th>
+                                <th>Team 1</th>
+                                <th>Team 2</th>
+                                <th>Group</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standings View -->
+        <div id="standingsView" class="view-container active">
+            <div class="team-tabs" id="teamTabs"></div>
+            <div class="team-content" id="teamContent"></div>
+        </div>
+
+        <!-- Schedule View -->
+        <div id="scheduleView" class="view-container">
+            <!-- Filters -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="filters-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Filter by Status</label>
+                        <select id="scheduleFilterStatus" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending Only</option>
+                            <option value="completed">Completed Only</option>
+                            <option value="draw">Draw Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Date</label>
+                        <input type="date" id="scheduleFilterDate" class="filter-select" min="2025-11-24" max="2025-12-10">
+                    </div>
+                    <div class="form-group">
+                        <label>Search Players/Teams</label>
+                        <input type="text" id="scheduleSearchText" class="filter-select" placeholder="Type to search...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="team-tabs" id="scheduleTeamTabs"></div>
+            <div class="schedule-content" id="scheduleContent"></div>
+        </div>
+
+        <!-- Participants View -->
+        <div id="participantsView" class="view-container">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                        <h2>👥 All Participants</h2>
+                        <p style="color: var(--text-secondary); margin: 0;">
+                            Complete list of all teams and players in the tournament
+                        </p>
+                    </div>
+                    <button id="addTeamBtnParticipants" class="btn btn-primary" style="display: none;">
+                        ➕ Add New Team
+                    </button>
+                </div>
+                
+                <!-- Search -->
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="participantsSearch" placeholder="🔍 Search by team, player name, or manager..." 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+                
+                <div class="table-container">
+                    <table class="standings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Group</th>
+                                <th>Team ID</th>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Manager</th>
+                                <th style="display: none;" class="admin-only">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participantsTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Knockout View -->
+        <div id="knockoutView" class="view-container">
+            <div class="card">
+                <h2>🏆 Knockout Stage - Round of 32</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    32 qualified teams competing in single-elimination bracket
+                </p>
+                
+                <!-- Admin Controls -->
+                <div id="knockoutAdminControls" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(14, 165, 233, 0.1)); border-radius: 0.75rem;">
+                    <button onclick="calculateQualifiedTeams()" class="btn btn-primary">
+                        📊 Calculate Qualified Teams
+                    </button>
+                    <button onclick="generateBracket()" class="btn btn-success" style="margin-left: 0.5rem;">
+                        🎲 Generate Bracket
+                    </button>
+                    <button onclick="resetKnockout()" class="btn btn-danger" style="margin-left: 0.5rem;">
+                        🔄 Reset Knockout
+                    </button>
+                </div>
+                
+                <!-- Qualification Status -->
+                <div id="qualificationStatus"></div>
+                
+                <!-- Bracket Display -->
+                <div id="bracketDisplay"></div>
+            </div>
+        </div>
+
+        <!-- Elimination Chamber View -->
+        <div id="chamberView" class="view-container">
+            <div class="card">
+                <h2>⚡ ELIMINATION CHAMBER</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Round of 16 → Quarter Finals → Semi Finals → GRAND FINAL
+                </p>
+                
+                <!-- Chamber Display -->
+                <div id="chamberDisplay"></div>
+            </div>
+        </div>
+
+        <!-- Overall Tournament View -->
+        <div id="overallView" class="view-container">
+            <h2>Overall Tournament Standings</h2>
+            <div id="overallStandings"></div>
         </div>
     </div>
+
+    <!-- Fixed Position Badges -->
+    <span id="syncStatus" class="sync-status">🔄 Connecting...</span>
     
+    <!-- Floating Corner Buttons -->
+    <button id="adminBtn" class="floating-corner-btn admin-btn">🔐</button>
+    <button id="viewModeBtn" class="floating-corner-btn view-btn" style="display:none;">👁️</button>
+
+    <!-- Footer Trademark -->
+    <div class="footer-trademark">
+        Created with <span class="heart">❤️</span> by Santo's Claude
+    </div>
+
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
-    <!-- Firebase Config -->
-    <script>
-        // Your Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            databaseURL: "YOUR_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-    </script>
-    
-    <!-- App Logic -->
+    <!-- Your App Files -->
+    <script src="firebase-config.js"></script>
+    <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
