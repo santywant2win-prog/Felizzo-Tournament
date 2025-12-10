@@ -2299,14 +2299,168 @@ let knockoutData = {
 function renderKnockoutView() {
     if (!APP_STATE.dataLoaded) return;
     
-    // Show admin controls if admin
-    const adminControls = document.getElementById('knockoutAdminControls');
-    if (adminControls) {
-        adminControls.style.display = APP_STATE.isAdmin ? 'block' : 'none';
+    const container = document.getElementById('knockoutView');
+    if (!container) return;
+    
+    // Calculate actual qualification status
+    const qualificationData = getQualificationSummary();
+    
+    let html = '<div class="card"><h2>🏆 Knockout Qualification Status</h2>';
+    
+    // Summary stats
+    html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: 700;">${qualificationData.guaranteed.length}</div>
+            <div>Guaranteed Qualified</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: 700;">${qualificationData.wildCards.length}</div>
+            <div>Wild Cards Qualified</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: 700;">${qualificationData.tieBreakers.length}</div>
+            <div>Tie-Breakers Needed</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: 700;">1</div>
+            <div>Play-In Match</div>
+        </div>
+    </div>`;
+    
+    // Guaranteed qualified teams
+    if (qualificationData.guaranteed.length > 0) {
+        html += '<h3 style="color: #10b981; margin: 2rem 0 1rem 0;">✅ Guaranteed Qualified (Top 2)</h3>';
+        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Position</th><th>Team</th><th>Points</th></tr></thead><tbody>';
+        qualificationData.guaranteed.forEach((team, idx) => {
+            html += `<tr>
+                <td>${idx + 1}</td>
+                <td><strong>${team.group}</strong></td>
+                <td>${team.position}${team.position === 1 ? 'st' : 'nd'}</td>
+                <td>${team.teamId}</td>
+                <td><strong>${team.points}</strong></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
     }
     
-    renderQualificationStatus();
-    renderBracket();
+    // Wild card qualified teams
+    if (qualificationData.wildCards.length > 0) {
+        html += '<h3 style="color: #3b82f6; margin: 2rem 0 1rem 0;">🎟️ Wild Card Qualified (3rd Place)</h3>';
+        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Team</th><th>Points</th></tr></thead><tbody>';
+        qualificationData.wildCards.forEach((team, idx) => {
+            html += `<tr>
+                <td>${qualificationData.guaranteed.length + idx + 1}</td>
+                <td><strong>${team.group}</strong></td>
+                <td>${team.teamId}</td>
+                <td><strong>${team.points}</strong></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    
+    // Tie-breakers needed
+    if (qualificationData.tieBreakers.length > 0) {
+        html += '<h3 style="color: #f59e0b; margin: 2rem 0 1rem 0;">⚠️ Tie-Breakers Needed</h3>';
+        html += '<div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">These matches need to be played to determine qualification</div>';
+        qualificationData.tieBreakers.forEach((tb, idx) => {
+            html += `<div style="background: white; border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                <h4 style="color: #92400e; margin-bottom: 1rem;">Match ${idx + 1}: ${tb.group}</h4>
+                <div style="display: flex; align-items: center; gap: 1rem; justify-content: center;">
+                    <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                        <strong>${tb.team1}</strong><br>
+                        <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
+                    </div>
+                    <div style="font-weight: 700; color: #64748b;">VS</div>
+                    <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                        <strong>${tb.team2}</strong><br>
+                        <span style="font-size: 0.85rem; color: #64748b;">${tb.points} points</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #64748b;">
+                    ${tb.type === 'guaranteed' ? 'Winner → Guaranteed, Loser → Wild Card' : 'Winner → Wild Card'}
+                </div>
+            </div>`;
+        });
+    }
+    
+    // Play-in match
+    if (qualificationData.playIn) {
+        html += '<h3 style="color: #8b5cf6; margin: 2rem 0 1rem 0;">🥊 Play-In Match (32nd Spot)</h3>';
+        html += `<div style="background: white; border: 2px solid #8b5cf6; border-radius: 12px; padding: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; justify-content: center;">
+                <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <strong>${qualificationData.playIn.team1}</strong><br>
+                    <span style="font-size: 0.85rem; color: #64748b;">1 P - 3rd place</span>
+                </div>
+                <div style="font-weight: 700; color: #64748b;">VS</div>
+                <div style="flex: 1; text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                    <strong>${qualificationData.playIn.team2}</strong><br>
+                    <span style="font-size: 0.85rem; color: #64748b;">SE - 3rd place</span>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #64748b;">
+                Winner gets the 32nd and final knockout spot
+            </div>
+        </div>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Get current qualification summary
+function getQualificationSummary() {
+    const guaranteed = [];
+    const wildCards = [];
+    const tieBreakers = [];
+    let playIn = null;
+    
+    Object.keys(tournamentData).forEach(groupName => {
+        const standings = calculateStandings(groupName);
+        
+        standings.forEach((team, idx) => {
+            if (team.qualificationType === 'Guaranteed (1st)' || team.qualificationType === 'Guaranteed (2nd)') {
+                guaranteed.push({
+                    group: groupName,
+                    position: idx + 1,
+                    teamId: team.teamId,
+                    points: team.points
+                });
+            } else if (team.qualificationType === 'Wild Card (3rd)') {
+                wildCards.push({
+                    group: groupName,
+                    teamId: team.teamId,
+                    points: team.points
+                });
+            } else if (team.qualificationType && team.qualificationType.includes('Tie-Breaker')) {
+                // Find the tie-breaker pair
+                const nextTeam = standings[idx + 1];
+                if (nextTeam && nextTeam.points === team.points) {
+                    // Only add once per pair
+                    if (!tieBreakers.find(tb => tb.group === groupName && tb.team1 === team.teamId)) {
+                        tieBreakers.push({
+                            group: groupName,
+                            team1: team.teamId,
+                            team2: nextTeam.teamId,
+                            points: team.points,
+                            type: idx < 2 ? 'guaranteed' : 'wildcard'
+                        });
+                    }
+                }
+            } else if (team.qualificationType === 'Play-In Match') {
+                if (!playIn) {
+                    playIn = { team1: null, team2: null };
+                }
+                if (groupName === '1 P') {
+                    playIn.team1 = team.teamId;
+                } else if (groupName === 'SE') {
+                    playIn.team2 = team.teamId;
+                }
+            }
+        });
+    });
+    
+    return { guaranteed, wildCards, tieBreakers, playIn };
 }
 
 // ============================================
