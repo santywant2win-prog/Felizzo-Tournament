@@ -57,30 +57,32 @@ function loadDataFromFirebase() {
         originalTournamentData = JSON.parse(JSON.stringify(tournamentData));
     }
     
-    // Show loading immediately
-    APP_STATE.dataLoaded = true;
-    renderAllViews();
-    
-    // Load from Firebase in background
     tournamentRef.once('value', (snapshot) => {
         if (snapshot.exists()) {
-            console.log('✅ Data loaded from Firebase');
+            // Data exists in Firebase - use it
+            console.log('Loading data from Firebase...');
             const firebaseData = snapshot.val();
             Object.assign(tournamentData, firebaseData);
+            APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
-            renderAllViews(); // Refresh with Firebase data
+            renderAllViews();
         } else {
-            console.log('No Firebase data, using local defaults');
+            // No data in Firebase - initialize with default data
+            console.log('No data in Firebase. Initializing...');
             initializeFirebaseData();
         }
     }).catch((error) => {
-        console.error('Firebase error:', error);
-        updateSyncStatus('error', '❌ Offline mode');
+        console.error('Error loading from Firebase:', error);
+        updateSyncStatus('error', '❌ Load failed');
+        // Fall back to local data
+        APP_STATE.dataLoaded = true;
+        renderAllViews();
     });
     
-    // Listen for real-time updates (but don't block initial load)
+    // Listen for real-time updates
     tournamentRef.on('value', (snapshot) => {
         if (APP_STATE.dataLoaded && snapshot.exists()) {
+            console.log('Data updated from Firebase');
             const firebaseData = snapshot.val();
             Object.assign(tournamentData, firebaseData);
             renderAllViews();
@@ -622,26 +624,13 @@ function renderTeamStandings(teamName) {
     const teamData = tournamentData[teamName];
     const standings = calculateStandings(teamName);
     
-    // Check for tie-breakers in this group
-    const tieBreakers = detectTieBreakers();
-    const groupTieBreakers = tieBreakers.filter(tb => tb.group === teamName);
-    
     let html = `
         <div class="card">
             <h2>${teamName} - Standings</h2>
             <p style="color: var(--text-light); margin-bottom: 1rem;">
                 Manager: ${teamData.participants[0]?.manager || 'N/A'}
-            </p>`;
-    
-    // Show tie-breaker alert if exists
-    if (groupTieBreakers.length > 0) {
-        html += `<div class="alert alert-warning" style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-            ⚠️ Tie-breaker detected in this group at position ${groupTieBreakers[0].position}
-            <button onclick="renderTieBreakerSheet()" class="btn btn-sm btn-warning" style="margin-left: 1rem;">View Details</button>
-        </div>`;
-    }
-    
-    html += `
+            </p>
+            
             <div class="table-container">
                 <table class="standings-table">
                     <thead>
@@ -1255,7 +1244,7 @@ function renderOverallView() {
             </div>
             
             <div style="margin-top: 1.5rem; text-align: center;">
-                <button onclick="renderTieBreakerSheet()" class="btn btn-warning" style="font-size: 1.1rem; padding: 0.75rem 2rem;">
+                <button onclick="showTieBreakerSheet()" class="btn btn-warning" style="font-size: 1.1rem; padding: 0.75rem 2rem;">
                     ⚖️ View Tie-Breaker Sheet
                 </button>
             </div>
@@ -3133,7 +3122,7 @@ function handleDateOnlySave(form) {
 
 
 // ============================================
-// TIE-BREAKER DETECTION & SHEET
+// TIE-BREAKER FEATURE - Added for Santo
 // ============================================
 
 function detectTieBreakers() {
@@ -3143,20 +3132,18 @@ function detectTieBreakers() {
     groupNames.forEach(groupName => {
         const standings = calculateStandings(groupName);
         
-        // Check top 3 positions for ties
+        // Check top 3 for ties
         let i = 0;
         while (i < Math.min(3, standings.length)) {
             const currentPoints = standings[i].points;
             const tiedTeams = [standings[i]];
             let j = i + 1;
             
-            // Find all teams with same points
             while (j < standings.length && standings[j].points === currentPoints) {
                 tiedTeams.push(standings[j]);
                 j++;
             }
             
-            // If 2+ teams tied, record it
             if (tiedTeams.length > 1) {
                 tieBreakers.push({
                     group: groupName,
@@ -3173,86 +3160,66 @@ function detectTieBreakers() {
     return tieBreakers;
 }
 
-function renderTieBreakerSheet() {
+function showTieBreakerSheet() {
     const tieBreakers = detectTieBreakers();
-    const container = document.getElementById('overallView');
+    const container = document.getElementById('overallStandings');
     
     let html = '<div class="card"><h2>⚖️ Tie-Breaker Sheet</h2>';
     
     if (tieBreakers.length === 0) {
-        html += '<div class="alert alert-success" style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">✅ No tie-breakers needed! All positions are clear.</div>';
+        html += '<div style="background: #d1fae5; padding: 1rem; border-radius: 8px; margin: 1rem 0;">✅ No tie-breakers! All positions clear.</div>';
     } else {
-        html += `<div class="alert alert-warning" style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">⚠️ Found ${tieBreakers.length} tie-breaker situation(s)</div>`;
+        html += `<div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin: 1rem 0;">⚠️ ${tieBreakers.length} tie-breaker(s) found</div>`;
         
         tieBreakers.forEach((tb, idx) => {
-            html += `<div class="tie-breaker-card" style="margin: 1.5rem 0; padding: 1.5rem; border: 2px solid #f59e0b; border-radius: 12px; background: #fffbeb;">
-                <h3 style="color: #92400e; margin-bottom: 1rem;">
-                    ${idx + 1}. ${tb.group} - Position ${tb.position} (${tb.points} points)
-                </h3>
-                
-                <div style="margin-bottom: 1rem;">
-                    <strong>Tied Teams:</strong><br>`;
+            html += `<div style="margin: 2rem 0; padding: 1.5rem; border: 2px solid #f59e0b; border-radius: 12px; background: #fffbeb;">
+                <h3 style="color: #92400e; margin-bottom: 1rem;">${idx + 1}. ${tb.group} - Position ${tb.position} (${tb.points} pts)</h3>
+                <div style="margin: 1rem 0;"><strong>Tied Teams:</strong><br>`;
             
             tb.teams.forEach(team => {
                 html += `<div style="padding: 0.5rem; margin: 0.5rem 0; background: white; border-radius: 6px;">
-                    ${team.team} - ${team.won}W ${team.draw}D ${team.lost}L
+                    ${team.team} - W:${team.won} D:${team.drawn} L:${team.lost}
                 </div>`;
             });
             
-            html += `</div>
-                <div style="margin-top: 1rem;">
-                    <strong>Head-to-Head Results:</strong>
-                    <table class="standings-table" style="margin-top: 0.5rem;">
-                        <thead>
-                            <tr>
-                                <th>Team</th>`;
+            html += `</div><div style="margin-top: 1rem;"><strong>Head-to-Head:</strong>
+                <table class="standings-table" style="margin-top: 0.5rem;"><thead><tr><th>Team</th>`;
             
-            tb.teams.forEach(t => {
-                html += `<th>${t.team}</th>`;
-            });
+            tb.teams.forEach(t => html += `<th>${t.team}</th>`);
             html += `</tr></thead><tbody>`;
             
-            // H2H matrix
             tb.teams.forEach(team1 => {
                 html += `<tr><td><strong>${team1.team}</strong></td>`;
                 tb.teams.forEach(team2 => {
                     if (team1.team === team2.team) {
                         html += '<td style="background: #374151; color: white;">-</td>';
                     } else {
-                        // Find h2h record
                         const group = tournamentData[tb.group];
-                        const h2hMatches = group.matches.filter(m => 
+                        const h2h = group.matches.filter(m => 
                             (m.o1 === team1.team && m.o2 === team2.team) || 
                             (m.o1 === team2.team && m.o2 === team1.team)
                         );
                         
                         let result = '-';
-                        h2hMatches.forEach(m => {
+                        h2h.forEach(m => {
                             if (m.w) {
-                                if (m.draw) {
-                                    result = 'D';
-                                } else if (m.w === team1.team) {
-                                    result = 'W';
-                                } else {
-                                    result = 'L';
-                                }
+                                if (m.draw) result = 'D';
+                                else if (m.w === team1.team) result = 'W';
+                                else result = 'L';
                             }
                         });
                         
-                        const bgColor = result === 'W' ? '#d1fae5' : (result === 'L' ? '#fee2e2' : '#fef3c7');
-                        html += `<td style="background: ${bgColor};">${result}</td>`;
+                        const bg = result === 'W' ? '#d1fae5' : (result === 'L' ? '#fee2e2' : '#fef3c7');
+                        html += `<td style="background: ${bg};">${result}</td>`;
                     }
                 });
                 html += '</tr>';
             });
             
-            html += `</tbody></table>
-                </div>
-            </div>`;
+            html += `</tbody></table></div></div>`;
         });
     }
     
-    html += '<button onclick="renderOverallView()" class="btn btn-secondary" style="margin-top: 1rem;">← Back to Overall</button>';
-    html += '</div>';
+    html += '<button onclick="renderOverallView()" class="btn btn-secondary" style="margin-top: 1rem;">← Back</button></div>';
     container.innerHTML = html;
 }
