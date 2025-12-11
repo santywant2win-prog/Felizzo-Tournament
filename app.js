@@ -66,6 +66,7 @@ function loadDataFromFirebase() {
             APP_STATE.dataLoaded = true;
             updateSyncStatus('synced', '✅ Synced');
             loadTieBreakersFromFirebase(); // Load tie-breaker results
+            loadBracketFromFirebase(); // Load bracket
             renderAllViews();
         } else {
             // No data in Firebase - initialize with default data
@@ -2495,6 +2496,22 @@ function loadTieBreakersFromFirebase() {
     });
 }
 
+function loadBracketFromFirebase() {
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            knockoutData.bracket = snapshot.val();
+            console.log('✅ Bracket loaded from Firebase');
+            if (APP_STATE.currentView === 'knockout') {
+                renderKnockoutView();
+            }
+            if (APP_STATE.currentView === 'chamber') {
+                renderChamberView();
+            }
+        }
+    });
+}
+
 // ============================================
 // KNOCKOUT STAGE
 // ============================================
@@ -2981,12 +2998,21 @@ function getQualificationSummary() {
     const playInKey = 'playin-1P-SE';
     const playInWinner = knockoutData.tieBreakerResults[playInKey];
     if (playInWinner && playIn) {
-        // Only add play-in winner if not already in guaranteed or wildCards
-        const alreadyQualified = [...guaranteed, ...wildCards].some(t => t.teamId === playInWinner);
+        // Determine which group won
+        const winnerGroup = playInWinner.startsWith('C') ? '1 P' : 'SE';
         
-        if (!alreadyQualified) {
+        // If SE won, add their 3rd place team to guaranteed (they get 3 teams)
+        // If 1P won, add to wild cards (they only get 2 guaranteed + 1 wild card)
+        if (winnerGroup === 'SE') {
+            guaranteed.push({
+                group: 'SE',
+                position: 3,
+                teamId: playInWinner,
+                points: 'Play-in Winner'
+            });
+        } else {
             wildCards.push({
-                group: playInWinner.startsWith('C') ? '1 P' : 'SE',
+                group: '1 P',
                 teamId: playInWinner,
                 points: 'Play-in Winner'
             });
