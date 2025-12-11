@@ -2418,9 +2418,44 @@ function renderTieBreakerView() {
 
 function updateTieBreakerResult(matchKey, winner) {
     knockoutData.tieBreakerResults[matchKey] = winner;
+    
+    // If bracket exists, update TBD slots with resolved teams
+    if (knockoutData.bracket && !knockoutData.bracket.finalized) {
+        updateBracketTBD();
+    }
+    
     renderTieBreakerView();
-    renderKnockoutView(); // Update knockout view immediately
+    renderKnockoutView();
     updateSyncStatus('modified', '⚠️ Unsaved changes');
+}
+
+function updateBracketTBD() {
+    const qualData = getQualificationSummary();
+    
+    // Get newly qualified teams from resolved tie-breakers
+    const newTeams = [...qualData.guaranteed, ...qualData.wildCards];
+    
+    knockoutData.bracket.round32.forEach(match => {
+        // Update team1 if TBD
+        if (match.team1.teamId === 'TBD') {
+            const matchingTeam = newTeams.find(t => 
+                match.team1.pendingMatch && match.team1.pendingMatch.includes(t.group)
+            );
+            if (matchingTeam) {
+                match.team1 = matchingTeam;
+            }
+        }
+        
+        // Update team2 if TBD
+        if (match.team2.teamId === 'TBD') {
+            const matchingTeam = newTeams.find(t => 
+                match.team2.pendingMatch && match.team2.pendingMatch.includes(t.group)
+            );
+            if (matchingTeam) {
+                match.team2 = matchingTeam;
+            }
+        }
+    });
 }
 
 function resetAllTieBreakers() {
@@ -2452,6 +2487,10 @@ function loadTieBreakersFromFirebase() {
         if (snapshot.exists()) {
             knockoutData.tieBreakerResults = snapshot.val();
             console.log('✅ Tie-breaker results loaded from Firebase');
+            // Re-render views to show updated qualification
+            if (APP_STATE.currentView === 'knockout') {
+                renderKnockoutView();
+            }
         }
     });
 }
@@ -2581,8 +2620,168 @@ function renderKnockoutView() {
         </div>`;
     }
     
+    // Generate Bracket section (allow if we have 30+ teams)
+    const totalQualified = qualificationData.guaranteed.length + qualificationData.wildCards.length;
+    const totalPending = qualificationData.tieBreakers.length + (qualificationData.playIn ? 1 : 0);
+    
+    if (totalQualified + totalPending === 32) {
+        
+        if (!knockoutData.bracket) {
+            // No bracket yet - show generate button
+            html += `<div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 15px; text-align: center;">
+                <h3 style="color: white; margin-bottom: 1rem;">🎉 All 32 Teams Qualified!</h3>
+                <button onclick="generateKnockoutBracket()" class="btn" style="background: white; color: #10b981; font-size: 1.1rem; padding: 1rem 2rem;">
+                    🎲 Generate Random Bracket
+                </button>
+            </div>`;
+        } else if (!knockoutData.bracket.finalized) {
+            // Bracket generated but not finalized - show preview and options
+            html += `<div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 15px;">
+                <h3 style="color: white; margin-bottom: 1rem;">🎲 Bracket Preview (Not Finalized)</h3>
+                <div style="background: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                    <table class="standings-table">
+                        <thead><tr><th>Match</th><th>Team 1</th><th>vs</th><th>Team 2</th></tr></thead>
+                        <tbody>`;
+            
+            knockoutData.bracket.round32.forEach((match, idx) => {
+                const isTBD1 = match.team1.teamId === 'TBD';
+                const isTBD2 = match.team2.teamId === 'TBD';
+                
+                const name1 = isTBD1 ? `TBD (${match.team1.pendingMatch})` : getTeamDisplay(match.team1.group, match.team1.teamId);
+                const name2 = isTBD2 ? `TBD (${match.team2.pendingMatch})` : getTeamDisplay(match.team2.group, match.team2.teamId);
+                
+                const style1 = isTBD1 ? 'color: #f59e0b; font-style: italic;' : '';
+                const style2 = isTBD2 ? 'color: #f59e0b; font-style: italic;' : '';
+                
+                html += `<tr>
+                    <td><strong>Match ${match.matchId}</strong></td>
+                    <td style="${style1}">${name1}${isTBD1 ? '' : ' (' + match.team1.group + ')'}</td>
+                    <td style="text-align: center; font-weight: 700;">VS</td>
+                    <td style="${style2}">${name2}${isTBD2 ? '' : ' (' + match.team2.group + ')'}</td>
+                </tr>`;
+            });
+            
+            html += `</tbody></table>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="generateKnockoutBracket()" class="btn" style="background: white; color: #f59e0b; font-size: 1rem; padding: 0.75rem 1.5rem;">
+                        🔄 Re-Shuffle
+                    </button>
+                    <button onclick="finalizeBracket()" class="btn btn-success" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+                        ✅ Finalize Bracket
+                    </button>
+                    <button onclick="resetBracket()" class="btn btn-danger" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+                        🗑️ Reset
+                    </button>
+                </div>
+            </div>`;
+        } else {
+            // Bracket finalized - show confirmation
+            html += `<div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 15px; text-align: center;">
+                <h3 style="color: white; margin-bottom: 1rem;">✅ Bracket Finalized!</h3>
+                <p style="color: white; margin-bottom: 1rem;">View matches in Elimination Chamber tab</p>
+                <button onclick="resetBracket()" class="btn btn-danger">
+                    🗑️ Reset Bracket
+                </button>
+            </div>`;
+        }
+    }
+    
     html += '</div>';
     container.innerHTML = html;
+}
+
+// Generate knockout bracket with random draw
+function generateKnockoutBracket() {
+    const qualData = getQualificationSummary();
+    const allTeams = [...qualData.guaranteed, ...qualData.wildCards];
+    
+    // Add TBD placeholders for pending tie-breakers
+    qualData.tieBreakers.forEach(tb => {
+        allTeams.push({
+            group: tb.group,
+            teamId: 'TBD',
+            points: 'Pending',
+            pendingMatch: `${tb.group}: ${tb.team1} vs ${tb.team2}`
+        });
+    });
+    
+    // Add TBD for pending play-in
+    if (qualData.playIn) {
+        allTeams.push({
+            group: 'Play-in',
+            teamId: 'TBD',
+            points: 'Pending',
+            pendingMatch: `1P vs SE`
+        });
+    }
+    
+    if (allTeams.length !== 32) {
+        alert(`Error: Need exactly 32 teams. Currently have ${allTeams.length}`);
+        return;
+    }
+    
+    // Shuffle teams randomly
+    for (let i = allTeams.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allTeams[i], allTeams[j]] = [allTeams[j], allTeams[i]];
+    }
+    
+    // Create bracket (16 matches)
+    knockoutData.bracket = {
+        round32: [],
+        finalized: false
+    };
+    
+    for (let i = 0; i < 16; i++) {
+        knockoutData.bracket.round32.push({
+            matchId: i + 1,
+            team1: allTeams[i * 2],
+            team2: allTeams[i * 2 + 1],
+            winner: null
+        });
+    }
+    
+    renderKnockoutView();
+}
+
+function finalizeBracket() {
+    if (!confirm('Finalize this bracket? This cannot be changed after finalization.')) {
+        return;
+    }
+    
+    knockoutData.bracket.finalized = true;
+    
+    // Save to Firebase
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.set(knockoutData.bracket)
+        .then(() => {
+            alert('✅ Bracket finalized!');
+            renderKnockoutView();
+        })
+        .catch((error) => {
+            console.error('Error saving bracket:', error);
+            alert('❌ Failed to finalize bracket');
+        });
+}
+
+function resetBracket() {
+    if (!confirm('Reset bracket? This will clear all matches.')) {
+        return;
+    }
+    
+    knockoutData.bracket = null;
+    
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.remove()
+        .then(() => {
+            alert('✅ Bracket reset!');
+            renderKnockoutView();
+        })
+        .catch((error) => {
+            console.error('Error resetting bracket:', error);
+            alert('❌ Failed to reset bracket');
+        });
 }
 
 // Get current qualification summary
@@ -2714,11 +2913,11 @@ function getQualificationSummary() {
     const playInWinner = knockoutData.tieBreakerResults[playInKey];
     if (playInWinner && playIn) {
         wildCards.push({
-            group: playInWinner.startsWith('C') ? '1 P' : 'SE', // Assuming C is from 1P, D from SE
+            group: playInWinner.startsWith('C') ? '1 P' : 'SE',
             teamId: playInWinner,
-            points: 0
+            points: 'Play-in Winner'
         });
-        playIn = null; // Mark as resolved
+        playIn = null;
     }
     
     return { guaranteed, wildCards, tieBreakers, playIn };
