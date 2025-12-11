@@ -3452,19 +3452,6 @@ function renderChamberView() {
     html += '</div>';
     container.innerHTML = html;
 }
-    // Quarter Finals
-    html += renderChamberRound('⚡ QUARTER FINALS', bracket.quarterFinals, 8, 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(234, 88, 12, 0.1))', '#f97316');
-    
-    // Semi Finals
-    html += renderChamberRound('💥 SEMI FINALS', bracket.semiFinals, 4, 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.1))', '#a855f7');
-    
-    // Final
-    if (bracket.final) {
-        html += renderFinalMatch(bracket.final, bracket.winner);
-    }
-    
-    container.innerHTML = html;
-}
 
 function renderChamberRound(title, matches, round, bgGradient, color) {
     if (!matches || matches.length === 0 || !matches[0] || (!matches[0].team1 && !matches[0].team2)) {
