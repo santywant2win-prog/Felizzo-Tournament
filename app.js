@@ -2606,6 +2606,7 @@ function getQualificationSummary() {
     const wildCards = [];
     const tieBreakers = [];
     let playIn = null;
+    const processedTies = new Set(); // Track processed tie-breaker pairs
     
     Object.keys(tournamentData).forEach(groupName => {
         const standings = calculateStandings(groupName);
@@ -2629,6 +2630,13 @@ function getQualificationSummary() {
                 const nextTeam = standings[idx + 1];
                 if (nextTeam && nextTeam.points === team.points) {
                     const matchKey = `${groupName}-${team.teamId}-${nextTeam.teamId}`;
+                    
+                    // Skip if already processed
+                    if (processedTies.has(matchKey)) {
+                        return;
+                    }
+                    processedTies.add(matchKey);
+                    
                     const winner = knockoutData.tieBreakerResults[matchKey];
                     
                     // If tie-breaker is resolved, add winner to appropriate category
@@ -2679,15 +2687,13 @@ function getQualificationSummary() {
                         }
                     } else {
                         // Tie-breaker not yet resolved - add to pending list
-                        if (!tieBreakers.find(tb => tb.group === groupName && tb.team1 === team.teamId)) {
-                            tieBreakers.push({
-                                group: groupName,
-                                team1: team.teamId,
-                                team2: nextTeam.teamId,
-                                points: team.points,
-                                type: idx < 2 ? 'guaranteed' : 'wildcard'
-                            });
-                        }
+                        tieBreakers.push({
+                            group: groupName,
+                            team1: team.teamId,
+                            team2: nextTeam.teamId,
+                            points: team.points,
+                            type: idx < 2 ? 'guaranteed' : 'wildcard'
+                        });
                     }
                 }
             } else if (team.qualificationType === 'Play-In Match') {
@@ -2708,9 +2714,9 @@ function getQualificationSummary() {
     const playInWinner = knockoutData.tieBreakerResults[playInKey];
     if (playInWinner && playIn) {
         wildCards.push({
-            group: playInWinner === playIn.team1 ? '1 P' : 'SE',
+            group: playInWinner.startsWith('C') ? '1 P' : 'SE', // Assuming C is from 1P, D from SE
             teamId: playInWinner,
-            points: 0 // We don't track points for play-in
+            points: 0
         });
         playIn = null; // Mark as resolved
     }
