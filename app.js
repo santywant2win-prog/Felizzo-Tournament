@@ -2506,6 +2506,98 @@ let knockoutData = {
     tieBreakerResults: {} // Stores tie-breaker match results: { 'groupName-team1-team2': 'winner' }
 };
 
+// Select winner in bracket match
+function selectWinner(matchId, teamId) {
+    if (!knockoutData.bracket || !knockoutData.bracket.finalized) {
+        alert('Bracket must be finalized first!');
+        return;
+    }
+    
+    const match = knockoutData.bracket.round32.find(m => m.matchId === matchId);
+    if (!match) return;
+    
+    // Toggle: if clicking same winner, unset it (reset)
+    if (match.winner === teamId) {
+        match.winner = null;
+    } else {
+        match.winner = teamId;
+    }
+    
+    // Save to Firebase
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.set(knockoutData.bracket)
+        .then(() => {
+            renderChamberView();
+        })
+        .catch((error) => {
+            console.error('Error saving winner:', error);
+            alert('❌ Failed to save winner');
+        });
+}
+
+// Render NBA-style bracket
+function renderBracketView(matches, interactive = false) {
+    let html = '<div style="background: white; padding: 2rem; border-radius: 10px; overflow-x: auto;">';
+    html += '<div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 3rem; min-width: 900px;">';
+    
+    // Left side (8 matches)
+    html += '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
+    for (let i = 0; i < 8; i++) {
+        html += renderBracketMatch(matches[i], interactive);
+    }
+    html += '</div>';
+    
+    // Center (Finals placeholder)
+    html += '<div style="display: flex; align-items: center; justify-content: center; padding: 0 2rem;"><div style="font-size: 2rem; color: #64748b;">🏆</div></div>';
+    
+    // Right side (8 matches)
+    html += '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
+    for (let i = 8; i < 16; i++) {
+        html += renderBracketMatch(matches[i], interactive);
+    }
+    html += '</div>';
+    
+    html += '</div></div>';
+    return html;
+}
+
+function renderBracketMatch(match, interactive) {
+    const isTBD1 = match.team1.teamId === 'TBD';
+    const isTBD2 = match.team2.teamId === 'TBD';
+    
+    const name1 = isTBD1 ? `TBD (${match.team1.pendingMatch})` : getTeamDisplay(match.team1.group, match.team1.teamId);
+    const name2 = isTBD2 ? `TBD (${match.team2.pendingMatch})` : getTeamDisplay(match.team2.group, match.team2.teamId);
+    
+    const isWinner1 = match.winner === match.team1.teamId;
+    const isWinner2 = match.winner === match.team2.teamId;
+    
+    let html = `<div style="border: 2px solid #e5e7eb; border-radius: 8px; background: white; padding: 0.5rem;">`;
+    html += `<div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; text-align: center;">Match ${match.matchId}</div>`;
+    
+    // Team 1
+    const bg1 = isWinner1 ? '#d1fae5' : (isTBD1 ? '#fef3c7' : 'white');
+    const click1 = interactive && !isTBD1 ? `onclick="selectWinner(${match.matchId}, '${match.team1.teamId}')"` : '';
+    const cursor1 = interactive && !isTBD1 ? 'cursor: pointer;' : '';
+    html += `<div ${click1} style="padding: 0.75rem; border: 2px solid ${isWinner1 ? '#10b981' : '#e5e7eb'}; border-radius: 6px; margin-bottom: 0.25rem; background: ${bg1}; ${cursor1}">`;
+    html += `<div style="font-weight: 600; font-size: 0.9rem; ${isTBD1 ? 'color: #f59e0b; font-style: italic;' : ''}">${name1}</div>`;
+    if (!isTBD1) html += `<div style="font-size: 0.75rem; color: #64748b;">${match.team1.group}</div>`;
+    if (isWinner1) html += `<div style="color: #10b981; font-size: 0.75rem; font-weight: 700;">✓ WINNER</div>`;
+    html += '</div>';
+    
+    // Team 2
+    const bg2 = isWinner2 ? '#d1fae5' : (isTBD2 ? '#fef3c7' : 'white');
+    const click2 = interactive && !isTBD2 ? `onclick="selectWinner(${match.matchId}, '${match.team2.teamId}')"` : '';
+    const cursor2 = interactive && !isTBD2 ? 'cursor: pointer;' : '';
+    html += `<div ${click2} style="padding: 0.75rem; border: 2px solid ${isWinner2 ? '#10b981' : '#e5e7eb'}; border-radius: 6px; background: ${bg2}; ${cursor2}">`;
+    html += `<div style="font-weight: 600; font-size: 0.9rem; ${isTBD2 ? 'color: #f59e0b; font-style: italic;' : ''}">${name2}</div>`;
+    if (!isTBD2) html += `<div style="font-size: 0.75rem; color: #64748b;">${match.team2.group}</div>`;
+    if (isWinner2) html += `<div style="color: #10b981; font-size: 0.75rem; font-weight: 700;">✓ WINNER</div>`;
+    html += '</div>';
+    
+    html += '</div>';
+    return html;
+}
+
 function renderKnockoutView() {
     if (!APP_STATE.dataLoaded) return;
     
@@ -2637,33 +2729,11 @@ function renderKnockoutView() {
         } else if (!knockoutData.bracket.finalized) {
             // Bracket generated but not finalized - show preview and options
             html += `<div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 15px;">
-                <h3 style="color: white; margin-bottom: 1rem;">🎲 Bracket Preview (Not Finalized)</h3>
-                <div style="background: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
-                    <table class="standings-table">
-                        <thead><tr><th>Match</th><th>Team 1</th><th>vs</th><th>Team 2</th></tr></thead>
-                        <tbody>`;
+                <h3 style="color: white; margin-bottom: 1rem;">🎲 Bracket Preview (Not Finalized)</h3>`;
             
-            knockoutData.bracket.round32.forEach((match, idx) => {
-                const isTBD1 = match.team1.teamId === 'TBD';
-                const isTBD2 = match.team2.teamId === 'TBD';
-                
-                const name1 = isTBD1 ? `TBD (${match.team1.pendingMatch})` : getTeamDisplay(match.team1.group, match.team1.teamId);
-                const name2 = isTBD2 ? `TBD (${match.team2.pendingMatch})` : getTeamDisplay(match.team2.group, match.team2.teamId);
-                
-                const style1 = isTBD1 ? 'color: #f59e0b; font-style: italic;' : '';
-                const style2 = isTBD2 ? 'color: #f59e0b; font-style: italic;' : '';
-                
-                html += `<tr>
-                    <td><strong>Match ${match.matchId}</strong></td>
-                    <td style="${style1}">${name1}${isTBD1 ? '' : ' (' + match.team1.group + ')'}</td>
-                    <td style="text-align: center; font-weight: 700;">VS</td>
-                    <td style="${style2}">${name2}${isTBD2 ? '' : ' (' + match.team2.group + ')'}</td>
-                </tr>`;
-            });
+            html += renderBracketView(knockoutData.bracket.round32, false);
             
-            html += `</tbody></table>
-                </div>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            html += `<div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                     <button onclick="generateKnockoutBracket()" class="btn" style="background: white; color: #f59e0b; font-size: 1rem; padding: 0.75rem 1.5rem;">
                         🔄 Re-Shuffle
                     </button>
@@ -3361,22 +3431,27 @@ function renderChamberView() {
     const container = document.getElementById('chamberDisplay');
     if (!container) return;
     
-    if (!knockoutData.bracket || !knockoutData.bracket.round16) {
+    if (!knockoutData.bracket || !knockoutData.bracket.finalized) {
         container.innerHTML = `
-            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
-                <p>Complete Round of 32 first to unlock the Elimination Chamber!</p>
-                <p style="margin-top: 0.5rem;">Go to <strong>🏆 Knockout</strong> tab to set up the bracket.</p>
+            <div class="card">
+                <h2>⚡ Elimination Chamber</h2>
+                <div style="padding: 2rem; text-align: center; color: var(--text-light); background: #f9fafb; border-radius: 8px;">
+                    <p style="font-size: 1.1rem; margin-bottom: 1rem;">🏆 Bracket not finalized yet</p>
+                    <p>Go to <strong>🏆 Knockout</strong> tab to finalize the bracket.</p>
+                </div>
             </div>
         `;
         return;
     }
     
-    const bracket = knockoutData.bracket;
-    let html = '';
+    let html = '<div class="card"><h2>⚡ Elimination Chamber - Round of 32</h2>';
+    html += '<p style="color: var(--text-secondary); margin-bottom: 2rem;">Click on a team to select winner. Winner auto-advances to next round.</p>';
     
-    // Round of 16
-    html += renderChamberRound('🔥 ROUND OF 16', bracket.round16, 16, 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1))', '#ef4444');
+    html += renderBracketView(knockoutData.bracket.round32, true);
     
+    html += '</div>';
+    container.innerHTML = html;
+}
     // Quarter Finals
     html += renderChamberRound('⚡ QUARTER FINALS', bracket.quarterFinals, 8, 'linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(234, 88, 12, 0.1))', '#f97316');
     
