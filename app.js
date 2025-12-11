@@ -2632,13 +2632,12 @@ function renderKnockoutView() {
     // Guaranteed qualified teams
     if (qualificationData.guaranteed.length > 0) {
         html += '<h3 style="color: #10b981; margin: 2rem 0 1rem 0;">✅ Guaranteed Qualified (Top 2)</h3>';
-        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Position</th><th>Participants</th><th>Points</th></tr></thead><tbody>';
+        html += '<table class="standings-table"><thead><tr><th>#</th><th>Group</th><th>Participants</th><th>Points</th></tr></thead><tbody>';
         qualificationData.guaranteed.forEach((team, idx) => {
             const names = getTeamDisplay(team.group, team.teamId);
             html += `<tr>
                 <td>${idx + 1}</td>
                 <td><strong>${team.group}</strong></td>
-                <td>${team.position}${team.position === 1 ? 'st' : 'nd'}</td>
                 <td>${names}</td>
                 <td><strong>${team.points}</strong></td>
             </tr>`;
@@ -2982,11 +2981,16 @@ function getQualificationSummary() {
     const playInKey = 'playin-1P-SE';
     const playInWinner = knockoutData.tieBreakerResults[playInKey];
     if (playInWinner && playIn) {
-        wildCards.push({
-            group: playInWinner.startsWith('C') ? '1 P' : 'SE',
-            teamId: playInWinner,
-            points: 'Play-in Winner'
-        });
+        // Only add play-in winner if not already in guaranteed or wildCards
+        const alreadyQualified = [...guaranteed, ...wildCards].some(t => t.teamId === playInWinner);
+        
+        if (!alreadyQualified) {
+            wildCards.push({
+                group: playInWinner.startsWith('C') ? '1 P' : 'SE',
+                teamId: playInWinner,
+                points: 'Play-in Winner'
+            });
+        }
         playIn = null;
     }
     
