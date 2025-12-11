@@ -609,9 +609,13 @@ function calculateStandings(teamName) {
         }
         // Position 3 - Wild card eligible (except 1P and SE)
         else if (position === 3) {
-            if (teamName === '1 P' || teamName === 'SE') {
-                // 1P and SE 3rd place: Play-in match
-                team.qualificationType = 'Play-In Match';
+            if (teamName === '1 P') {
+                // 1P 3rd place: doesn't qualify (no play-in anymore)
+                team.qualificationType = null;
+            } else if (teamName === 'SE') {
+                // SE is special: top 3 all qualify as guaranteed
+                team.qualified = true;
+                team.qualificationType = 'Guaranteed (3rd)';
             } else if (prevTeam && prevTeam.points === currentPoints) {
                 // Tied with position 2
                 team.qualificationType = 'Tie-Breaker Needed';
@@ -2897,7 +2901,7 @@ function getQualificationSummary() {
         const standings = calculateStandings(groupName);
         
         standings.forEach((team, idx) => {
-            if (team.qualificationType === 'Guaranteed (1st)' || team.qualificationType === 'Guaranteed (2nd)') {
+            if (team.qualificationType === 'Guaranteed (1st)' || team.qualificationType === 'Guaranteed (2nd)' || team.qualificationType === 'Guaranteed (3rd)') {
                 guaranteed.push({
                     group: groupName,
                     position: idx + 1,
@@ -2981,46 +2985,11 @@ function getQualificationSummary() {
                         });
                     }
                 }
-            } else if (team.qualificationType === 'Play-In Match') {
-                if (!playIn) {
-                    playIn = { team1: null, team2: null };
-                }
-                if (groupName === '1 P') {
-                    playIn.team1 = team.teamId;
-                } else if (groupName === 'SE') {
-                    playIn.team2 = team.teamId;
-                }
             }
         });
     });
     
-    // Check if play-in is resolved
-    const playInKey = 'playin-1P-SE';
-    const playInWinner = knockoutData.tieBreakerResults[playInKey];
-    if (playInWinner && playIn) {
-        // Determine which group won
-        const winnerGroup = playInWinner.startsWith('C') ? '1 P' : 'SE';
-        
-        // If SE won, add their 3rd place team to guaranteed (they get 3 teams)
-        // If 1P won, add to wild cards (they only get 2 guaranteed + 1 wild card)
-        if (winnerGroup === 'SE') {
-            guaranteed.push({
-                group: 'SE',
-                position: 3,
-                teamId: playInWinner,
-                points: 'Play-in Winner'
-            });
-        } else {
-            wildCards.push({
-                group: '1 P',
-                teamId: playInWinner,
-                points: 'Play-in Winner'
-            });
-        }
-        playIn = null;
-    }
-    
-    return { guaranteed, wildCards, tieBreakers, playIn };
+    return { guaranteed, wildCards, tieBreakers, playIn: null };
 }
 
 // ============================================
