@@ -598,7 +598,11 @@ function calculateStandings(teamName) {
         }
         // Position 2 - Qualified unless tied with position 1 or 3
         else if (position === 2) {
-            if (prevTeam && prevTeam.points === currentPoints) {
+            // SE hardcode: top 3 always qualified
+            if (teamName === 'SE') {
+                team.qualified = true;
+                team.qualificationType = 'Guaranteed (2nd)';
+            } else if (prevTeam && prevTeam.points === currentPoints) {
                 team.qualificationType = 'Tie-Breaker Needed';
             } else if (nextTeam && nextTeam.points === currentPoints) {
                 team.qualificationType = 'Tie-Breaker Needed';
@@ -613,7 +617,7 @@ function calculateStandings(teamName) {
                 // 1P 3rd place: doesn't qualify (no play-in anymore)
                 team.qualificationType = null;
             } else if (teamName === 'SE') {
-                // SE is special: top 3 all qualify as guaranteed
+                // SE hardcode: top 3 always qualified
                 team.qualified = true;
                 team.qualificationType = 'Guaranteed (3rd)';
             } else if (prevTeam && prevTeam.points === currentPoints) {
@@ -3490,16 +3494,17 @@ function renderChamberView() {
     }
     
     let html = '<div class="card"><h2>⚡ Elimination Chamber - Round of 32</h2>';
-    html += '<p style="color: var(--text-secondary); margin-bottom: 1rem;">Click on a team to select winner. Results auto-save.</p>';
+    html += '<p style="color: var(--text-secondary); margin-bottom: 1rem;">Click on a team to select winner.</p>';
+    
+    // Fixed save button at top
+    html += `<div style="position: sticky; top: 0; z-index: 100; background: white; padding: 1rem; margin: -1rem -1rem 1rem -1rem; border-bottom: 2px solid #e5e7eb; text-align: center;">
+        <button onclick="manualSaveBracket()" class="btn btn-success" style="font-size: 1.1rem; padding: 1rem 3rem;">
+            💾 SAVE ALL RESULTS TO FIREBASE
+        </button>
+        <div id="saveStatus" style="margin-top: 0.5rem; color: #64748b; font-size: 0.9rem;">Ready to save</div>
+    </div>`;
     
     html += renderBracketView(knockoutData.bracket.round32, true);
-    
-    html += `<div style="margin-top: 2rem; text-align: center;">
-        <button onclick="manualSaveBracket()" class="btn btn-success" style="font-size: 1rem; padding: 0.75rem 2rem;">
-            💾 Save All Results
-        </button>
-        <div id="saveStatus" style="margin-top: 0.5rem; color: #64748b; font-size: 0.9rem;">Auto-saving after each selection</div>
-    </div>`;
     
     html += '</div>';
     container.innerHTML = html;
