@@ -2527,6 +2527,27 @@ let knockoutData = {
     tieBreakerResults: {} // Stores tie-breaker match results: { 'groupName-team1-team2': 'winner' }
 };
 
+// Manual save bracket
+function manualSaveBracket() {
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.set(knockoutData.bracket)
+        .then(() => {
+            const status = document.getElementById('saveStatus');
+            if (status) {
+                status.textContent = '✅ Saved successfully!';
+                status.style.color = '#10b981';
+                setTimeout(() => {
+                    status.textContent = 'Auto-saving after each selection';
+                    status.style.color = '#64748b';
+                }, 2000);
+            }
+        })
+        .catch((error) => {
+            console.error('Error saving:', error);
+            alert('❌ Failed to save');
+        });
+}
+
 // Select winner in bracket match
 function selectWinner(matchId, teamId) {
     if (!knockoutData.bracket || !knockoutData.bracket.finalized) {
@@ -2544,19 +2565,15 @@ function selectWinner(matchId, teamId) {
         match.winner = teamId;
     }
     
-    // Save to Firebase FIRST, then render
-    const bracketRef = firebase.database().ref('knockoutBracket');
-    bracketRef.set(knockoutData.bracket)
-        .then(() => {
-            console.log('✅ Winner saved');
-            // Now render after save completes
-            setTimeout(() => renderChamberView(), 100);
-        })
-        .catch((error) => {
-            console.error('Error saving winner:', error);
-            alert('❌ Failed to save winner');
-            renderChamberView();
-        });
+    // Update UI immediately without full re-render
+    const status = document.getElementById('saveStatus');
+    if (status) {
+        status.textContent = '⚠️ Unsaved changes - Click Save button';
+        status.style.color = '#f59e0b';
+    }
+    
+    // Just update the specific match visually
+    renderChamberView();
 }
 
 // Render NBA-style bracket
@@ -2760,6 +2777,9 @@ function renderKnockoutView() {
                     <button onclick="generateKnockoutBracket()" class="btn" style="background: white; color: #f59e0b; font-size: 1rem; padding: 0.75rem 1.5rem;">
                         🔄 Re-Shuffle
                     </button>
+                    <button onclick="saveBracketPreview()" class="btn btn-primary" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+                        💾 Save Preview
+                    </button>
                     <button onclick="finalizeBracket()" class="btn btn-success" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
                         ✅ Finalize Bracket
                     </button>
@@ -2847,6 +2867,18 @@ function generateKnockoutBracket() {
     renderKnockoutView();
 }
 
+function saveBracketPreview() {
+    const bracketRef = firebase.database().ref('knockoutBracket');
+    bracketRef.set(knockoutData.bracket)
+        .then(() => {
+            alert('✅ Bracket preview saved!');
+        })
+        .catch((error) => {
+            console.error('Error saving bracket:', error);
+            alert('❌ Failed to save bracket');
+        });
+}
+
 function finalizeBracket() {
     if (!confirm('Finalize this bracket? This cannot be changed after finalization.')) {
         return;
@@ -2913,7 +2945,10 @@ function getQualificationSummary() {
         const standings = calculateStandings(groupName);
         
         standings.forEach((team, idx) => {
-            if (team.qualificationType === 'Guaranteed (1st)' || team.qualificationType === 'Guaranteed (2nd)' || team.qualificationType === 'Guaranteed (3rd)') {
+            // Skip if team has tie-breaker qualification type (they'll be processed later)
+            const hasTieBreaker = team.qualificationType && team.qualificationType.includes('Tie-Breaker');
+            
+            if (!hasTieBreaker && (team.qualificationType === 'Guaranteed (1st)' || team.qualificationType === 'Guaranteed (2nd)' || team.qualificationType === 'Guaranteed (3rd)')) {
                 guaranteed.push({
                     group: groupName,
                     position: idx + 1,
@@ -3456,9 +3491,16 @@ function renderChamberView() {
     }
     
     let html = '<div class="card"><h2>⚡ Elimination Chamber - Round of 32</h2>';
-    html += '<p style="color: var(--text-secondary); margin-bottom: 2rem;">Click on a team to select winner. Winner auto-advances to next round.</p>';
+    html += '<p style="color: var(--text-secondary); margin-bottom: 1rem;">Click on a team to select winner. Results auto-save.</p>';
     
     html += renderBracketView(knockoutData.bracket.round32, true);
+    
+    html += `<div style="margin-top: 2rem; text-align: center;">
+        <button onclick="manualSaveBracket()" class="btn btn-success" style="font-size: 1rem; padding: 0.75rem 2rem;">
+            💾 Save All Results
+        </button>
+        <div id="saveStatus" style="margin-top: 0.5rem; color: #64748b; font-size: 0.9rem;">Auto-saving after each selection</div>
+    </div>`;
     
     html += '</div>';
     container.innerHTML = html;
