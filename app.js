@@ -2536,11 +2536,9 @@ function manualSaveBracket() {
             if (status) {
                 status.textContent = '✅ Saved successfully!';
                 status.style.color = '#10b981';
-                setTimeout(() => {
-                    status.textContent = 'Auto-saving after each selection';
-                    status.style.color = '#64748b';
-                }, 2000);
             }
+            // Refresh view after save to show updated winners
+            setTimeout(() => renderChamberView(), 500);
         })
         .catch((error) => {
             console.error('Error saving:', error);
@@ -2565,15 +2563,16 @@ function selectWinner(matchId, teamId) {
         match.winner = teamId;
     }
     
-    // Update UI immediately without full re-render
+    // Update status without re-rendering entire page
     const status = document.getElementById('saveStatus');
     if (status) {
-        status.textContent = '⚠️ Unsaved changes - Click Save button';
+        status.textContent = '⚠️ Unsaved changes - Click Save button below';
         status.style.color = '#f59e0b';
+        status.style.fontWeight = '700';
     }
     
-    // Just update the specific match visually
-    renderChamberView();
+    // Don't call renderChamberView() - keeps save button visible!
+    console.log('Winner selected:', teamId, 'for match', matchId);
 }
 
 // Render NBA-style bracket
