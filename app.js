@@ -2944,8 +2944,14 @@ function getQualificationSummary() {
     let playIn = null;
     const processedTies = new Set(); // Track processed tie-breaker pairs
     
+    console.log('🔍 getQualificationSummary called');
+    
     Object.keys(tournamentData).forEach(groupName => {
         const standings = calculateStandings(groupName);
+        
+        if (groupName === 'SE') {
+            console.log('🔍 SE standings:', standings.map(t => `${t.teamId}:${t.points}pts-${t.qualificationType}`));
+        }
         
         standings.forEach((team, idx) => {
             // Skip if team has tie-breaker qualification type (they'll be processed later)
@@ -3038,6 +3044,13 @@ function getQualificationSummary() {
             }
         });
     });
+    
+    console.log('🔍 Final counts:', {
+        guaranteed: guaranteed.length,
+        wildCards: wildCards.length,
+        tieBreakers: tieBreakers.length
+    });
+    console.log('🔍 SE teams in guaranteed:', guaranteed.filter(t => t.group === 'SE'));
     
     return { guaranteed, wildCards, tieBreakers, playIn: null };
 }
