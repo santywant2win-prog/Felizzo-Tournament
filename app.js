@@ -2544,15 +2544,18 @@ function selectWinner(matchId, teamId) {
         match.winner = teamId;
     }
     
-    // Save to Firebase
+    // Save to Firebase FIRST, then render
     const bracketRef = firebase.database().ref('knockoutBracket');
     bracketRef.set(knockoutData.bracket)
         .then(() => {
-            renderChamberView();
+            console.log('✅ Winner saved');
+            // Now render after save completes
+            setTimeout(() => renderChamberView(), 100);
         })
         .catch((error) => {
             console.error('Error saving winner:', error);
             alert('❌ Failed to save winner');
+            renderChamberView();
         });
 }
 
@@ -2786,6 +2789,12 @@ function generateKnockoutBracket() {
     const qualData = getQualificationSummary();
     const allTeams = [...qualData.guaranteed, ...qualData.wildCards];
     
+    console.log('🔍 Qualified teams before TBD:', {
+        guaranteed: qualData.guaranteed.length,
+        wildCards: qualData.wildCards.length,
+        total: allTeams.length
+    });
+    
     // Add TBD placeholders for pending tie-breakers
     qualData.tieBreakers.forEach(tb => {
         allTeams.push({
@@ -2805,6 +2814,9 @@ function generateKnockoutBracket() {
             pendingMatch: `1P vs SE`
         });
     }
+    
+    console.log('🔍 Total teams with TBD:', allTeams.length);
+    console.log('🔍 SE teams:', allTeams.filter(t => t.group === 'SE'));
     
     if (allTeams.length !== 32) {
         alert(`Error: Need exactly 32 teams. Currently have ${allTeams.length}`);
